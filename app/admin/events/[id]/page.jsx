@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/confirm';
 import { EVENT_STATUS_TRANSITIONS } from '@/lib/events/constants.js';
 import { STATUS_TONE, money, dateLabel, timeRange, guestLabel , errText} from '../event-ui';
+import Quotation from './quotation';
 
 export default function EventDetailPage() {
   const { id } = useParams();
@@ -34,6 +35,7 @@ export default function EventDetailPage() {
 
   const event = data?.event;
   const audit = data?.audit || [];
+  const lines = data?.lines || [];
   const nextStatuses = (EVENT_STATUS_TRANSITIONS[event?.status] || []).filter((s) => s !== 'CANCELLED');
 
   const patch = async (body, successTitle) => {
@@ -129,6 +131,8 @@ export default function EventDetailPage() {
             <Row label="Expected / guaranteed / actual"
               value={`${event.expected_guests ?? '—'} / ${event.guaranteed_guests ?? '—'} / ${event.actual_guests ?? '—'}`} />
           </Panel>
+
+          <Quotation event={event} lines={lines} onChanged={load} addToast={addToast} />
 
           <Panel title="Client">
             <Row label="Name" value={event.customer_name || event.contact_name || '—'} />

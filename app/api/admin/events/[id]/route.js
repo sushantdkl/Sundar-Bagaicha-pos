@@ -3,6 +3,7 @@ import Database from '@/lib/db/index';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
 import { getEvent, updateEvent, changeEventStatus, cancelEvent } from '@/lib/events/service.js';
 import { eventAuditHistory } from '@/lib/events/audit.js';
+import { listLines } from '@/lib/events/lines.js';
 
 export async function GET(request, { params }) {
   try {
@@ -11,8 +12,11 @@ export async function GET(request, { params }) {
     const db = Database.getInstance();
     const { id } = await params;
     const event = await getEvent(db, id);
-    const audit = await eventAuditHistory(db, event.id, { limit: 50 });
-    return NextResponse.json({ event, audit });
+    const [audit, lines] = await Promise.all([
+      eventAuditHistory(db, event.id, { limit: 50 }),
+      listLines(db, event.id),
+    ]);
+    return NextResponse.json({ event, audit, lines });
   } catch (error) {
     return handleRouteError(error, 'Failed to load the event.');
   }
