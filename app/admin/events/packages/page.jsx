@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import AdminLayout from '@/components/admin/admin-layout';
-import { AlertTriangle, ArrowLeft, Calculator, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Calculator, Pencil, Plus, RefreshCw, Trash2, UtensilsCrossed, X } from 'lucide-react';
 import { apiJson } from '@/lib/authed-fetch';
 import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/confirm';
 import { money, errText } from '../event-ui';
+import ComponentsEditor from './components-editor';
 
 const POLICY_LABEL = {
   whole_party: 'Whole-party tier',
@@ -33,6 +34,7 @@ export default function EventPackagesPage() {
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState(null);
   const [calc, setCalc] = useState(null);
+  const [menuFor, setMenuFor] = useState(null);
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -166,6 +168,7 @@ export default function EventPackagesPage() {
                 <button onClick={() => setCalc({ pkg: p, guests: 100, result: null, manualRate: '' })} className={SMALL}>
                   <Calculator className="h-3.5 w-3.5" />Calculator
                 </button>
+                <button onClick={() => setMenuFor(p)} className={SMALL}><UtensilsCrossed className="h-3.5 w-3.5" />Package menu</button>
                 <button
                   onClick={() => setForm({
                     ...p,
@@ -200,6 +203,7 @@ export default function EventPackagesPage() {
 
       {form && <PackageForm form={form} setForm={setForm} onSave={save} onClose={() => setForm(null)} busy={busy} addToast={addToast} />}
       {calc && <CalculatorDialog calc={calc} setCalc={setCalc} onClose={() => setCalc(null)} addToast={addToast} />}
+      {menuFor && <ComponentsEditor pkg={menuFor} onClose={() => { setMenuFor(null); load(); }} addToast={addToast} />}
     </AdminLayout>
   );
 }
