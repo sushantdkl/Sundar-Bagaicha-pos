@@ -12,15 +12,15 @@
     "build": "next build --webpack",
     "start": "node server.js",
     "lint": "eslint .",
-    "db:migrate": "node scripts/migrate.mjs",
-    "db:seed": "node scripts/seed-postgres.mjs",
-    "db:pg:init": "node scripts/migrate.mjs && node scripts/seed-postgres.mjs",
-    "health": "node scripts/healthcheck.mjs",
+    "db:migrate": "node --env-file-if-exists=.env scripts/migrate.mjs",
+    "db:seed": "node --env-file-if-exists=.env scripts/seed-postgres.mjs",
+    "db:pg:init": "node --env-file-if-exists=.env scripts/migrate.mjs && node --env-file-if-exists=.env scripts/seed-postgres.mjs",
+    "health": "node --env-file-if-exists=.env scripts/healthcheck.mjs",
     "test:e2e": "playwright test",
     "test:unit": "node --import ./tests/unit/loader-register.mjs --test tests/unit/*.test.js",
-    "import:menu": "node scripts/import-menu.mjs",
-    "db:seed-images": "node scripts/seed-menu-images.mjs",
-    "map:menu-images": "node scripts/map-menu-images.mjs"
+    "import:menu": "node --env-file-if-exists=.env scripts/import-menu.mjs",
+    "db:seed-images": "node --env-file-if-exists=.env scripts/seed-menu-images.mjs",
+    "map:menu-images": "node --env-file-if-exists=.env scripts/map-menu-images.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
