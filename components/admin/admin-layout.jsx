@@ -337,6 +337,7 @@ export default function AdminLayout({ children }) {
         { icon: PartyPopper, label: 'Events Dashboard', href: '/admin/events', color: 'text-fuchsia-700' },
         { icon: CalendarRange, label: 'Events Calendar', href: '/admin/events/calendar', color: 'text-violet-600' },
         { icon: LayoutGrid, label: 'Event Spaces', href: '/admin/events/spaces', color: 'text-teal-700' },
+        { icon: Layers, label: 'Event Packages', href: '/admin/events/packages', color: 'text-amber-700' },
       ],
     },
     {
