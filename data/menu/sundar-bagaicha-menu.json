@@ -1,0 +1,1420 @@
+{
+  "business": "Sundar Bagaicha Events",
+  "currency": "NPR",
+  "sources": [
+    {
+      "id": "food-card",
+      "label": "Printed food menu card (6 photographed pages)",
+      "files": [
+        "public/menu/WhatsApp Image 2026-08-18 at 10.36.47 PM.jpeg",
+        "public/menu/WhatsApp Image 2026-08-18 at 10.36.47 PM (1).jpeg",
+        "public/menu/WhatsApp Image 2026-08-18 at 10.36.48 PM.jpeg",
+        "public/menu/WhatsApp Image 2026-08-18 at 10.36.48 PM (1).jpeg",
+        "public/menu/WhatsApp Image 2026-08-18 at 10.36.49 PM.jpeg",
+        "public/menu/WhatsApp Image 2026-08-18 at 10.36.49 PM (1).jpeg"
+      ]
+    },
+    {
+      "id": "bar-card",
+      "label": "Printed liquors menu (sundar_bagaicha_menu_v3.html)",
+      "files": [
+        "data/menu/source/liquors-menu.html"
+      ]
+    }
+  ],
+  "transcription_rules": [
+    "Prices are copied exactly from the source; none are calculated or inferred.",
+    "A source line carrying two items and two prices (e.g. 'Dry Papad/Fry Papad 120/180') is split into two items.",
+    "A source line offering one item in several sizes becomes one item plus variants, priced per size.",
+    "Menu-card spellings are kept; only obvious typographic slips are normalised and listed in `spelling_normalised`.",
+    "Where the two printed cards disagree on a shared drink, the food card wins because it is the newer photographed card. Every such case is listed in `conflicts` for the client to confirm."
+  ],
+  "spelling_normalised": [
+    {
+      "printed": "Pop corn",
+      "used": "Popcorn"
+    },
+    {
+      "printed": "Penauts Sadheko",
+      "used": "Peanuts Sadheko"
+    },
+    {
+      "printed": "Chips Chily",
+      "used": "Chips Chilly"
+    },
+    {
+      "printed": "Aalo Jeera",
+      "used": "Aalo Jeera"
+    },
+    {
+      "printed": "Desert",
+      "used": "Desserts"
+    }
+  ],
+  "conflicts": [
+    {
+      "item": "Black Tea",
+      "note": "The food card prints Black Tea twice on the same page: Rs 30 in the 'Desert' block and Rs 45 in the dedicated 'Tea/Coffee' block. Seeded at Rs 45 (dedicated block).",
+      "values": {
+        "food-card-desert-block": 30,
+        "food-card-tea-block": 45
+      },
+      "seeded": 45
+    },
+    {
+      "item": "Milk Tea",
+      "note": "Food card prints Rs 40 ('Milk Tea / Lemon Tea', Desert block) and Rs 65 (Tea/Coffee block). Seeded at Rs 65.",
+      "values": {
+        "food-card-desert-block": 40,
+        "food-card-tea-block": 65
+      },
+      "seeded": 65
+    },
+    {
+      "item": "Hot Lemon with Honey",
+      "note": "Food card Rs 120; bar card Rs 185.",
+      "values": {
+        "food-card": 120,
+        "bar-card": 185
+      },
+      "seeded": 120
+    },
+    {
+      "item": "Mineral Water",
+      "note": "Food card Rs 50; bar card Rs 35.",
+      "values": {
+        "food-card": 50,
+        "bar-card": 35
+      },
+      "seeded": 50
+    },
+    {
+      "item": "Coke / Fanta / Sprite",
+      "note": "Food card Rs 70; bar card Rs 85.",
+      "values": {
+        "food-card": 70,
+        "bar-card": 85
+      },
+      "seeded": 70
+    },
+    {
+      "item": "Real Juice",
+      "note": "Food card prints Rs 80 (Desert block, 'Guava, Mix Fruit, Mango') and Rs 150/400 (Soft Drinks block). Seeded as Glass Rs 150 / 1 Ltr Rs 400; the bar card's 'Juice (1 Ltr) Rs 425' is a third value.",
+      "values": {
+        "food-card-desert-block": 80,
+        "food-card-soft-drinks": "150/400",
+        "bar-card": 425
+      },
+      "seeded": "150 / 400"
+    },
+    {
+      "item": "Red Bull",
+      "note": "Food card Rs 350. The landing page listed Rs 200; the printed card is treated as current.",
+      "values": {
+        "food-card": 350,
+        "landing-page": 200
+      },
+      "seeded": 350
+    }
+  ],
+  "categories": [
+    {
+      "name": "Snacks",
+      "food_group": "food",
+      "source": "food-card",
+      "items": [
+        {
+          "name": "Veg Boil",
+          "price": 300
+        },
+        {
+          "name": "Popcorn",
+          "price": 150
+        },
+        {
+          "name": "Aalo Jeera",
+          "price": 180
+        },
+        {
+          "name": "Aaloo Sadheko",
+          "price": 200
+        },
+        {
+          "name": "Bhatmas Sadheko",
+          "price": 190
+        },
+        {
+          "name": "Peanuts Sadheko",
+          "price": 220
+        },
+        {
+          "name": "Chips Chilly",
+          "price": 300
+        },
+        {
+          "name": "Mushroom Chilly",
+          "price": 350
+        },
+        {
+          "name": "Paneer Pakauda",
+          "price": 300
+        },
+        {
+          "name": "Veg Pakauda",
+          "price": 150
+        },
+        {
+          "name": "Lasun Poleko",
+          "price": 170
+        },
+        {
+          "name": "Kaju Fry",
+          "price": 490
+        },
+        {
+          "name": "Dry Papad",
+          "price": 120
+        },
+        {
+          "name": "Fry Papad",
+          "price": 180
+        },
+        {
+          "name": "Green Salad",
+          "price": 250
+        },
+        {
+          "name": "Fruits Salad",
+          "price": 380
+        },
+        {
+          "name": "Gundruk Sadheko",
+          "price": 150
+        },
+        {
+          "name": "Veg Khaja Set",
+          "price": 250
+        },
+        {
+          "name": "Chicken Khaja Set",
+          "price": 350
+        },
+        {
+          "name": "Spring Roll (Veg)",
+          "price": 160
+        },
+        {
+          "name": "Spring Roll (Chicken)",
+          "price": 220
+        },
+        {
+          "name": "Chauchau Sadheko",
+          "price": 150
+        },
+        {
+          "name": "Mustang Aalu",
+          "price": 280
+        },
+        {
+          "name": "French Fries",
+          "price": 200
+        },
+        {
+          "name": "Chatpate",
+          "price": 120
+        }
+      ]
+    },
+    {
+      "name": "Breakfast & Light Bites",
+      "food_group": "food",
+      "source": "food-card",
+      "items": [
+        {
+          "name": "Veg Sandwich",
+          "price": 90
+        },
+        {
+          "name": "Chicken Sandwich",
+          "price": 120
+        },
+        {
+          "name": "Veg Burger",
+          "price": 150
+        },
+        {
+          "name": "Chicken Burger",
+          "price": 180
+        },
+        {
+          "name": "Aalu Paratha",
+          "price": 150,
+          "description": "Served with pickle & curd"
+        },
+        {
+          "name": "Plain Paratha Set",
+          "price": 130,
+          "description": "3pcs with Veg Aalu Matar"
+        },
+        {
+          "name": "Grand Breakfast Combo",
+          "price": 300,
+          "description": "Sausage, 2 boiled eggs, and choice of sandwich OR 2pcs Aalu Paratha"
+        }
+      ]
+    },
+    {
+      "name": "Soups",
+      "food_group": "food",
+      "source": "food-card",
+      "items": [
+        {
+          "name": "Veg Manchow Soup",
+          "price": 120
+        },
+        {
+          "name": "Mushroom Soup",
+          "price": 150
+        },
+        {
+          "name": "Hot and Sour Soup",
+          "price": 160
+        },
+        {
+          "name": "Tomato Cream Soup",
+          "price": 160
+        },
+        {
+          "name": "Chicken Manchow Soup",
+          "price": 160
+        },
+        {
+          "name": "Local Chicken Soup",
+          "price": 220
+        },
+        {
+          "name": "Mutton Soup",
+          "price": 200
+        }
+      ]
+    },
+    {
+      "name": "Momo",
+      "food_group": "food",
+      "source": "food-card",
+      "items": [
+        {
+          "name": "Veg Steam Momo",
+          "price": 140
+        },
+        {
+          "name": "Veg Fry Momo",
+          "price": 150
+        },
+        {
+          "name": "Veg Chilly / C-Momo",
+          "price": 180
+        },
+        {
+          "name": "Chicken Steam Momo",
+          "price": 160
+        },
+        {
+          "name": "Chicken Fry Momo",
+          "price": 180
+        },
+        {
+          "name": "Chicken Chilly / C-Momo",
+          "price": 200
+        }
+      ]
+    },
+    {
+      "name": "Noodles & Thukpa",
+      "food_group": "food",
+      "source": "food-card",
+      "items": [
+        {
+          "name": "Veg Chowmein",
+          "price": 130
+        },
+        {
+          "name": "Veg Thukpa",
+          "price": 130
+        },
+        {
+          "name": "Egg Chowmein",
+          "price": 140
+        },
+        {
+          "name": "Egg Thukpa",
+          "price": 150
+        },
+        {
+          "name": "Chicken Chowmein",
+          "price": 160
+        },
+        {
+          "name": "Chicken Thukpa",
+          "price": 180
+        },
+        {
+          "name": "Mutton Thukpa",
+          "price": 250
+        },
+        {
+          "name": "Kima Noodles",
+          "price": 300
+        },
+        {
+          "name": "Veg Chopsuey",
+          "price": 200
+        },
+        {
+          "name": "American Chopsuey",
+          "price": 300
+        }
+      ]
+    },
+    {
+      "name": "Fried Rice",
+      "food_group": "food",
+      "source": "food-card",
+      "items": [
+        {
+          "name": "Veg Fried Rice",
+          "price": 150
+        },
+        {
+          "name": "Egg Fried Rice",
+          "price": 180
+        },
+        {
+          "name": "Chicken Fried Rice",
+          "price": 200
+        },
+        {
+          "name": "Mixed Fried Rice",
+          "price": 220
+        }
+      ]
+    },
+    {
+      "name": "Chicken Specialties",
+      "food_group": "food",
+      "source": "food-card",
+      "items": [
+        {
+          "name": "Chicken Roast",
+          "price": 200
+        },
+        {
+          "name": "Chicken Boil",
+          "price": 230
+        },
+        {
+          "name": "Chicken Lollipop",
+          "price": 280
+        },
+        {
+          "name": "Chicken Chilly",
+          "price": 260
+        },
+        {
+          "name": "Chicken Fry Sadheko",
+          "price": 270
+        },
+        {
+          "name": "Chicken Wings",
+          "price": 380
+        },
+        {
+          "name": "Chicken Timur",
+          "price": 300,
+          "description": "Szechuan pepper"
+        },
+        {
+          "name": "Chicken Sekuwa",
+          "price": 200
+        },
+        {
+          "name": "Chicken Sausage",
+          "price": 200
+        }
+      ]
+    },
+    {
+      "name": "Mutton Specialties",
+      "food_group": "food",
+      "source": "food-card",
+      "items": [
+        {
+          "name": "Mutton Bhutan",
+          "price": 250,
+          "description": "Fried organ meat"
+        },
+        {
+          "name": "Kan Jibro",
+          "price": 350,
+          "description": "Head/tongue delicacy"
+        },
+        {
+          "name": "Mutton Sekuwa",
+          "price": 480
+        },
+        {
+          "name": "Mutton Pakku",
+          "price": 450
+        },
+        {
+          "name": "Mutton Tas",
+          "price": 400
+        },
+        {
+          "name": "Mutton Polera",
+          "price": 420,
+          "description": "Char-grilled"
+        },
+        {
+          "name": "Mutton Fry Sadheko",
+          "price": 380
+        }
+      ]
+    },
+    {
+      "name": "Traditional Choila",
+      "food_group": "food",
+      "source": "food-card",
+      "items": [
+        {
+          "name": "Local Chicken Choila",
+          "price": 330
+        },
+        {
+          "name": "Local Chicken Choila Poleko",
+          "price": 380,
+          "description": "Grilled"
+        },
+        {
+          "name": "Duck (Has) Choila Fry",
+          "price": 350
+        },
+        {
+          "name": "Duck (Has) Choila Poleko",
+          "price": 400
+        },
+        {
+          "name": "Mutton Choila Fry",
+          "price": 400
+        },
+        {
+          "name": "Mutton Choila Poleko",
+          "price": 450
+        }
+      ]
+    },
+    {
+      "name": "Royal Biryani",
+      "food_group": "food",
+      "source": "food-card",
+      "items": [
+        {
+          "name": "Veg Biryani",
+          "price": 180
+        },
+        {
+          "name": "Egg Biryani",
+          "price": 200
+        },
+        {
+          "name": "Mushroom Biryani",
+          "price": 280
+        },
+        {
+          "name": "Chicken Biryani",
+          "price": 420
+        },
+        {
+          "name": "Paneer Biryani",
+          "price": 400
+        },
+        {
+          "name": "Mutton Biryani",
+          "price": 500
+        }
+      ]
+    },
+    {
+      "name": "Traditional Thali",
+      "food_group": "food",
+      "source": "food-card",
+      "items": [
+        {
+          "name": "Veg Khana Set",
+          "price": 280
+        },
+        {
+          "name": "Chicken Khana Set",
+          "price": 350
+        },
+        {
+          "name": "Mutton Khana Set",
+          "price": 550
+        },
+        {
+          "name": "Roti Curry",
+          "price": 250
+        }
+      ]
+    },
+    {
+      "name": "Curries",
+      "food_group": "food",
+      "source": "food-card",
+      "items": [
+        {
+          "name": "Chicken Gravy",
+          "price": 220
+        },
+        {
+          "name": "Chicken Masala",
+          "price": 200
+        },
+        {
+          "name": "Chicken Kadhai",
+          "price": 260
+        },
+        {
+          "name": "Butter Chicken",
+          "price": 360
+        },
+        {
+          "name": "Mutton Curry",
+          "price": 330
+        },
+        {
+          "name": "Mutton Gravy",
+          "price": 350
+        },
+        {
+          "name": "Mutton Rogan Josh",
+          "price": 380
+        }
+      ]
+    },
+    {
+      "name": "Desserts",
+      "food_group": "food",
+      "source": "food-card",
+      "items": [
+        {
+          "name": "Ice Cream",
+          "price": 90,
+          "description": "Choice of flavour",
+          "variants": [
+            {
+              "name": "Vanilla",
+              "price": 90,
+              "default": true
+            },
+            {
+              "name": "Chocolate",
+              "price": 90
+            },
+            {
+              "name": "Strawberry",
+              "price": 90
+            },
+            {
+              "name": "Pineapple",
+              "price": 90
+            },
+            {
+              "name": "Butterscotch",
+              "price": 90
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Tea & Coffee",
+      "food_group": "beverage",
+      "source": "food-card + bar-card",
+      "items": [
+        {
+          "name": "Black Tea",
+          "price": 45,
+          "source": "food-card"
+        },
+        {
+          "name": "Milk Tea",
+          "price": 65,
+          "source": "food-card"
+        },
+        {
+          "name": "Black Coffee",
+          "price": 50,
+          "source": "food-card"
+        },
+        {
+          "name": "Milk Coffee",
+          "price": 100,
+          "source": "food-card"
+        },
+        {
+          "name": "Hot Lemon with Honey",
+          "price": 120,
+          "source": "food-card"
+        },
+        {
+          "name": "Americano",
+          "price": 115,
+          "source": "bar-card",
+          "variants": [
+            {
+              "name": "Single",
+              "price": 115,
+              "default": true
+            },
+            {
+              "name": "Double",
+              "price": 225
+            }
+          ]
+        },
+        {
+          "name": "Espresso",
+          "price": 115,
+          "source": "bar-card",
+          "variants": [
+            {
+              "name": "Single",
+              "price": 115,
+              "default": true
+            },
+            {
+              "name": "Double",
+              "price": 225
+            }
+          ]
+        },
+        {
+          "name": "Cappuccino",
+          "price": 265,
+          "source": "bar-card"
+        },
+        {
+          "name": "Cafe Latte / Honey Latte",
+          "price": 285,
+          "source": "bar-card"
+        },
+        {
+          "name": "Caffe Mocha",
+          "price": 285,
+          "source": "bar-card"
+        },
+        {
+          "name": "Hot Chocolate",
+          "price": 285,
+          "source": "bar-card"
+        },
+        {
+          "name": "Iced Americano",
+          "price": 255,
+          "source": "bar-card"
+        },
+        {
+          "name": "Iced Mocha",
+          "price": 285,
+          "source": "bar-card"
+        },
+        {
+          "name": "Ice Cappuccino",
+          "price": 285,
+          "source": "bar-card"
+        },
+        {
+          "name": "Cold Coffee",
+          "price": 305,
+          "source": "bar-card"
+        }
+      ]
+    },
+    {
+      "name": "Soft Drinks",
+      "food_group": "beverage",
+      "source": "food-card + bar-card",
+      "items": [
+        {
+          "name": "Mineral Water",
+          "price": 50,
+          "source": "food-card"
+        },
+        {
+          "name": "Coke / Fanta / Sprite",
+          "price": 70,
+          "source": "food-card"
+        },
+        {
+          "name": "Red Bull",
+          "price": 350,
+          "source": "food-card"
+        },
+        {
+          "name": "Fresh Lime Soda",
+          "price": 100,
+          "source": "food-card"
+        },
+        {
+          "name": "Mint Mojito",
+          "price": 220,
+          "source": "food-card"
+        },
+        {
+          "name": "Real Juice",
+          "price": 150,
+          "source": "food-card",
+          "variants": [
+            {
+              "name": "Glass",
+              "price": 150,
+              "default": true
+            },
+            {
+              "name": "1 Ltr",
+              "price": 400
+            }
+          ]
+        },
+        {
+          "name": "Jumbo Coke",
+          "price": 425,
+          "source": "bar-card"
+        },
+        {
+          "name": "Somersby Cider",
+          "price": 265,
+          "source": "bar-card"
+        },
+        {
+          "name": "Fresh Fruit Juice",
+          "price": 335,
+          "source": "bar-card"
+        },
+        {
+          "name": "Strawberry / Banana / Mango Shake",
+          "price": 385,
+          "source": "bar-card"
+        },
+        {
+          "name": "Choco / Vanilla / Strawberry / Oreo Shake",
+          "price": 355,
+          "source": "bar-card"
+        }
+      ]
+    },
+    {
+      "name": "Beer",
+      "food_group": "beverage",
+      "source": "bar-card",
+      "items": [
+        {
+          "name": "Carlsberg Beer",
+          "price": 675
+        },
+        {
+          "name": "Gorkha Strong",
+          "price": 545
+        },
+        {
+          "name": "Tuborg Beer",
+          "price": 545
+        },
+        {
+          "name": "San Miguel",
+          "price": 412
+        },
+        {
+          "name": "Tuborg Gold",
+          "price": 625
+        },
+        {
+          "name": "Tuborg Strong",
+          "price": 545
+        },
+        {
+          "name": "Barahsinghe",
+          "price": 495
+        },
+        {
+          "name": "Tuborg Strong Small",
+          "price": 225
+        }
+      ]
+    },
+    {
+      "name": "Wine",
+      "food_group": "beverage",
+      "source": "bar-card",
+      "items": [
+        {
+          "name": "Big Master (Red / White)",
+          "price": 980
+        },
+        {
+          "name": "Jacobs Chardonnay",
+          "price": 2565
+        },
+        {
+          "name": "Jacobs Double Barrel Shiraz",
+          "price": 4455
+        },
+        {
+          "name": "Jacobs Merlot",
+          "price": 2565
+        },
+        {
+          "name": "Jacobs Moscato White",
+          "price": 2565
+        },
+        {
+          "name": "JP Chenet (Red / White)",
+          "price": 2685
+        },
+        {
+          "name": "Robertson Sweet (Red / White)",
+          "price": 2015
+        },
+        {
+          "name": "Hinwa Wine (Red / White)",
+          "price": 1035
+        },
+        {
+          "name": "Canvas (Red / White)",
+          "price": 1145
+        }
+      ]
+    },
+    {
+      "name": "Domestic Spirits",
+      "food_group": "beverage",
+      "source": "bar-card",
+      "sizes": [
+        "60ml",
+        "180ml",
+        "750ml"
+      ],
+      "items": [
+        {
+          "name": "8848 Vodka",
+          "tags": "vodka",
+          "sized": [
+            365,
+            675,
+            2685
+          ]
+        },
+        {
+          "name": "Nude Vodka",
+          "tags": "vodka",
+          "sized": [
+            365,
+            720,
+            2685
+          ]
+        },
+        {
+          "name": "Ruslan",
+          "tags": "vodka",
+          "sized": [
+            345,
+            690,
+            2690
+          ]
+        },
+        {
+          "name": "Seto Bagh",
+          "tags": "vodka",
+          "sized": [
+            345,
+            690,
+            2760
+          ]
+        },
+        {
+          "name": "Smirnoff Vodka Red",
+          "tags": "vodka",
+          "sized": [
+            365,
+            720,
+            2875
+          ]
+        },
+        {
+          "name": "Yeti Vodka",
+          "tags": "vodka",
+          "sized": [
+            365,
+            720,
+            2875
+          ]
+        },
+        {
+          "name": "Bandipur",
+          "tags": "whiskey",
+          "sized": [
+            915,
+            1815,
+            7255
+          ]
+        },
+        {
+          "name": "Black Chimney",
+          "tags": "whiskey",
+          "sized": [
+            600,
+            1205,
+            4805
+          ]
+        },
+        {
+          "name": "Golden Oak",
+          "tags": "whiskey",
+          "sized": [
+            195,
+            395,
+            1550
+          ]
+        },
+        {
+          "name": "Gurkhas & Guns",
+          "tags": "whiskey",
+          "sized": [
+            495,
+            980,
+            3915
+          ]
+        },
+        {
+          "name": "Himalayan Reserve",
+          "tags": "whiskey",
+          "sized": [
+            545,
+            1095,
+            4355
+          ]
+        },
+        {
+          "name": "Kala Patthar",
+          "tags": "whiskey",
+          "sized": [
+            450,
+            895,
+            3580
+          ]
+        },
+        {
+          "name": "Nepse Bulls",
+          "tags": "whiskey",
+          "sized": [
+            745,
+            1485,
+            5930
+          ]
+        },
+        {
+          "name": "Old Durbar",
+          "tags": "whiskey",
+          "sized": [
+            465,
+            925,
+            3450
+          ]
+        },
+        {
+          "name": "Signature Green",
+          "tags": "whiskey",
+          "sized": [
+            405,
+            810,
+            3230
+          ]
+        },
+        {
+          "name": "Signature Premium",
+          "tags": "whiskey",
+          "sized": [
+            425,
+            855,
+            3165
+          ]
+        },
+        {
+          "name": "Signature Red",
+          "tags": "whiskey",
+          "sized": [
+            365,
+            725,
+            2940
+          ]
+        },
+        {
+          "name": "The Governor",
+          "tags": "whiskey",
+          "sized": [
+            425,
+            850,
+            3380
+          ]
+        },
+        {
+          "name": "Yarchagumba",
+          "tags": "whiskey",
+          "sized": [
+            2750,
+            5495,
+            14050
+          ]
+        },
+        {
+          "name": "Honey Hunter Rum",
+          "tags": "rum",
+          "sized": [
+            360,
+            710,
+            2840
+          ]
+        },
+        {
+          "name": "Khukuri Rum",
+          "tags": "rum",
+          "sized": [
+            355,
+            600,
+            2785
+          ]
+        },
+        {
+          "name": "Khukuri Spice Rum",
+          "tags": "rum",
+          "sized": [
+            375,
+            745,
+            2965
+          ]
+        },
+        {
+          "name": "Old Monk Rum",
+          "tags": "rum",
+          "sized": [
+            320,
+            635,
+            2540
+          ]
+        },
+        {
+          "name": "Royal Stag",
+          "tags": "rum",
+          "sized": [
+            485,
+            975,
+            2495
+          ]
+        },
+        {
+          "name": "Grand Master Rum",
+          "tags": "rum",
+          "sized": [
+            450,
+            895,
+            2555
+          ]
+        },
+        {
+          "name": "Black Oak",
+          "tags": "rum",
+          "sized": [
+            195,
+            425,
+            1690
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Imported Spirits",
+      "food_group": "beverage",
+      "source": "bar-card",
+      "sizes": [
+        "60ml",
+        "200ml",
+        "1000ml"
+      ],
+      "items": [
+        {
+          "name": "Absolut",
+          "tags": "vodka",
+          "sized": [
+            690,
+            2070,
+            8285
+          ]
+        },
+        {
+          "name": "Belvedere Vodka",
+          "tags": "vodka",
+          "sized": [
+            1275,
+            3815,
+            15255
+          ]
+        },
+        {
+          "name": "Grey Goose",
+          "tags": "vodka",
+          "sized": [
+            1405,
+            4200,
+            16785
+          ]
+        },
+        {
+          "name": "Beefeater",
+          "tags": "gin",
+          "sized": [
+            710,
+            2120,
+            8485
+          ]
+        },
+        {
+          "name": "Malfy Gin",
+          "tags": "gin",
+          "sized": [
+            765,
+            2290,
+            9155
+          ]
+        },
+        {
+          "name": "Bombay Sapphire",
+          "tags": "gin",
+          "sized": [
+            2635,
+            5265,
+            13475
+          ]
+        },
+        {
+          "name": "Blue Riband",
+          "tags": "gin",
+          "sized": [
+            445,
+            885,
+            2250
+          ]
+        },
+        {
+          "name": "Ballantines Finest",
+          "tags": "scotch",
+          "sized": [
+            720,
+            2155,
+            8605
+          ]
+        },
+        {
+          "name": "Black Label",
+          "tags": "scotch",
+          "sized": [
+            930,
+            2775,
+            11110
+          ]
+        },
+        {
+          "name": "Chivas Regal 12 Yrs",
+          "tags": "scotch",
+          "sized": [
+            930,
+            2775,
+            11110
+          ]
+        },
+        {
+          "name": "Chivas Regal 18 Yrs",
+          "tags": "scotch",
+          "sized": [
+            2365,
+            7080,
+            28315
+          ]
+        },
+        {
+          "name": "Double Black",
+          "tags": "scotch",
+          "sized": [
+            1100,
+            3295,
+            13185
+          ]
+        },
+        {
+          "name": "Famous Grouse",
+          "tags": "scotch",
+          "sized": [
+            695,
+            2095,
+            8295
+          ]
+        },
+        {
+          "name": "Founders Reserve",
+          "tags": "scotch",
+          "sized": [
+            1160,
+            3485,
+            13915
+          ]
+        },
+        {
+          "name": "Red Label",
+          "tags": "scotch",
+          "sized": [
+            705,
+            2110,
+            8420
+          ]
+        },
+        {
+          "name": "Vat 69",
+          "tags": "scotch",
+          "sized": [
+            655,
+            1955,
+            7810
+          ]
+        },
+        {
+          "name": "Glenfiddich 12 Yrs",
+          "tags": "single malt",
+          "sized": [
+            1575,
+            4720,
+            18865
+          ]
+        },
+        {
+          "name": "Glenfiddich 15 Yrs",
+          "tags": "single malt",
+          "sized": [
+            2470,
+            7405,
+            29605
+          ]
+        },
+        {
+          "name": "Glenfiddich 18 Yrs",
+          "tags": "single malt",
+          "sized": [
+            2695,
+            8095,
+            32360
+          ]
+        },
+        {
+          "name": "Glenlivet 12 Yrs",
+          "tags": "single malt",
+          "sized": [
+            1370,
+            4105,
+            16415
+          ]
+        },
+        {
+          "name": "Glenlivet 18 Yrs",
+          "tags": "single malt",
+          "sized": [
+            3425,
+            10270,
+            41055
+          ]
+        },
+        {
+          "name": "Glenmorangie 10 Yrs",
+          "tags": "single malt",
+          "sized": [
+            970,
+            2900,
+            11595
+          ]
+        },
+        {
+          "name": "Macallan 12 Yrs",
+          "tags": "single malt",
+          "sized": [
+            1275,
+            3810,
+            15245
+          ]
+        },
+        {
+          "name": "Jack Daniels",
+          "tags": "bourbon",
+          "sized": [
+            845,
+            2535,
+            10135
+          ]
+        },
+        {
+          "name": "Jameson",
+          "tags": "bourbon",
+          "sized": [
+            795,
+            2380,
+            9525
+          ]
+        },
+        {
+          "name": "Jameson Black",
+          "tags": "bourbon",
+          "sized": [
+            785,
+            2345,
+            8790
+          ]
+        },
+        {
+          "name": "Jim Beam",
+          "tags": "bourbon",
+          "sized": [
+            835,
+            2490,
+            9945
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Shots",
+      "food_group": "beverage",
+      "source": "bar-card",
+      "items": [
+        {
+          "name": "Jagermeister",
+          "price": 405,
+          "description": "30ml",
+          "tags": "shot"
+        },
+        {
+          "name": "Tequila (Gold / Silver)",
+          "price": 345,
+          "description": "30ml",
+          "tags": "shot"
+        }
+      ]
+    }
+  ]
+}
