@@ -52,6 +52,24 @@ test('a menu item is linked to the stock SKU that means the same thing', async (
   assert.equal(await linkOf(cans), drink, 'Zephyr Cola should link to Zephyr Cola Cans');
 });
 
+test('a dish is never linked to the raw material it is made from', async () => {
+  // "Mutton" and "Mutton Tas" pass any containment-plus-length test, but one
+  // is a raw material and the other a dish. Selling one plate would have
+  // deducted one kilogram.
+  const dish = await menuId('Sorrel Tas');
+  const raw = await invId('Sorrel');
+  await autoLinkBeverageStock(db);
+  assert.equal(await linkOf(raw), null, 'Sorrel Tas must not be linked to Sorrel');
+  assert.notEqual(dish, null);
+});
+
+test('a stock row that only adds a container word is a match', async () => {
+  const drink = await menuId('Thistle Soda');
+  const bottles = await invId('Thistle Soda Bottles');
+  await autoLinkBeverageStock(db);
+  assert.equal(await linkOf(bottles), drink, 'Thistle Soda should link to Thistle Soda Bottles');
+});
+
 test('sharing a first word is not a match', async () => {
   // The rule this replaced accepted a match on the inventory item's first word
   // alone, which linked "Chicken Breast" to every menu item containing
