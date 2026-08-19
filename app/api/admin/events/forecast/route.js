@@ -6,7 +6,7 @@ import { forecastRange } from '@/lib/events/forecast.js';
 /** Combined requirement across upcoming events, for one purchasing run. */
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.view' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const q = new URL(request.url).searchParams;

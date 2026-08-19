@@ -22,6 +22,9 @@ function readPanelAuthSync() {
     const roleAllowed = cashierPanel
       ? ['admin', 'cashier'].includes(user.role)
       : user.role === 'admin';
+    // A non-admin on the Events subtree may hold events.view, but only the
+    // server knows. Resolving that needs a request, so this returns false and
+    // the spinner stays up until the capability check answers.
     return Boolean(token && roleAllowed);
   } catch {
     return false;
@@ -51,6 +54,10 @@ export default function AdminLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
   const isCashierPanel = pathname === '/cashier' || pathname?.startsWith('/cashier/');
+  // The Events subtree is the one part of /admin an admin can delegate: a
+  // cashier granted events.view gets in, and only here. Every other admin page
+  // stays admin-only exactly as before.
+  const isEventsPanel = pathname === '/admin/events' || Boolean(pathname?.startsWith('/admin/events/'));
   // Always start loading=true so SSR HTML matches the client's first paint.
   // Reading localStorage in useState() made the client skip the spinner while
   // the server still rendered it Ã¢â€ â€™ hydration mismatch.
@@ -62,6 +69,10 @@ export default function AdminLayout({ children }) {
   const [ordersBadge, setOrdersBadge] = useState(0);
   const [waiterCallsBadge, setWaiterCallsBadge] = useState(0);
   const [capabilities, setCapabilities] = useState(null);
+  // The role the server reports, which arrives with the capability check.
+  // Null until then, which reads as "not delegated" — so an admin sees the
+  // full sidebar from the first paint and nothing flickers.
+  const [userRole, setUserRole] = useState(null);
   const [openGroups, setOpenGroups] = useState({});
   const openLockRef = useRef(false);
   const navScrollRef = useRef(null);
@@ -120,21 +131,40 @@ export default function AdminLayout({ children }) {
     const roleAllowed = isCashierPanel
       ? ['admin', 'cashier'].includes(user.role)
       : user.role === 'admin';
-    if (!token || !roleAllowed) router.push('/login');
-    else setLoading(false);
+    if (!token) router.push('/login');
+    else if (roleAllowed) setLoading(false);
+    // Not allowed by role, but on Events: wait for the capability check below
+    // rather than bouncing someone who may have been granted access.
+    else if (!isEventsPanel) router.push('/login');
     return () => mq.removeEventListener('change', apply);
-  }, [router, isCashierPanel]);
+  }, [router, isCashierPanel, isEventsPanel]);
 
   useEffect(() => {
-    if (loading || !isCashierPanel) return undefined;
+    if (!isEventsPanel && (loading || !isCashierPanel)) return undefined;
     let cancelled = false;
     const token = localStorage.getItem('pos_token');
+    if (!token) return undefined;
     fetch('/api/auth/capabilities', { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => res.ok ? res.json() : null)
-      .then((data) => { if (!cancelled) setCapabilities(data?.capabilities || {}); })
+      .then((data) => {
+        if (cancelled) return;
+        setUserRole(data?.role || null);
+        setCapabilities(data?.capabilities || {});
+      })
       .catch(() => { if (!cancelled) setCapabilities({}); });
     return () => { cancelled = true; };
-  }, [loading, isCashierPanel, pathname]);
+  }, [loading, isCashierPanel, isEventsPanel, pathname]);
+
+  // A delegated non-admin is admitted by deriving the gate rather than
+  // flipping `loading`, so the two decisions never race. Failing closed is
+  // deliberate: a failed capability call sets {} and this effect sends them to
+  // login. The API enforces the same permissions independently.
+  const eventsDelegationAllows = isEventsPanel && capabilities?.['events.view'] === true;
+
+  useEffect(() => {
+    if (!loading || !isEventsPanel || capabilities === null) return;
+    if (capabilities['events.view'] !== true) router.push('/login');
+  }, [loading, isEventsPanel, capabilities, router]);
 
   // When entering POS, force-collapse (don't overwrite user's saved preference).
   // When leaving POS, restore the saved preference.
@@ -334,11 +364,11 @@ export default function AdminLayout({ children }) {
     {
       label: 'Events',
       items: [
-        { icon: PartyPopper, label: 'Events Dashboard', href: '/admin/events', color: 'text-fuchsia-700' },
-        { icon: CalendarRange, label: 'Events Calendar', href: '/admin/events/calendar', color: 'text-violet-600' },
-        { icon: LayoutGrid, label: 'Event Spaces', href: '/admin/events/spaces', color: 'text-teal-700' },
-        { icon: Layers, label: 'Event Packages', href: '/admin/events/packages', color: 'text-amber-700' },
-        { icon: TrendingUp, label: 'Event Reports', href: '/admin/events/reports', color: 'text-emerald-700' },
+        { icon: PartyPopper, label: 'Events Dashboard', href: '/admin/events', color: 'text-fuchsia-700', requiredPermission: 'events.view' },
+        { icon: CalendarRange, label: 'Events Calendar', href: '/admin/events/calendar', color: 'text-violet-600', requiredPermission: 'events.view' },
+        { icon: LayoutGrid, label: 'Event Spaces', href: '/admin/events/spaces', color: 'text-teal-700', requiredPermission: 'events.view' },
+        { icon: Layers, label: 'Event Packages', href: '/admin/events/packages', color: 'text-amber-700', requiredPermission: 'events.view' },
+        { icon: TrendingUp, label: 'Event Reports', href: '/admin/events/reports', color: 'text-emerald-700', requiredPermission: 'events.reports' },
       ],
     },
     {
@@ -447,17 +477,30 @@ export default function AdminLayout({ children }) {
     },
   ];
 
-  const rawNavGroups = isCashierPanel ? cashierNavGroups : adminNavGroups;
+  // A non-admin who was delegated the Events subtree gets the Events group and
+  // nothing else — showing them the whole admin sidebar would be a list of
+  // links that all bounce back to the login screen.
+  const delegatedEvents = isEventsPanel && userRole != null && userRole !== 'admin';
+  const rawNavGroups = isCashierPanel
+    ? cashierNavGroups
+    : delegatedEvents
+      ? adminNavGroups.filter((g) => g.label === 'Events')
+      : adminNavGroups;
 
   // Apply the deployment profile: hide disabled waiter/kitchen/table/reservation
   // entries and drop any group left empty. Routes still exist for historical data.
   const navGroups = rawNavGroups
     .map((group) => {
       if (!group.items) return isNavHidden(group.href) ? null : group;
-      const items = group.items.filter((it) =>
-        !isNavHidden(it.href)
-        && (!isCashierPanel || !it.requiredPermission || capabilities?.[it.requiredPermission] === true)
-      );
+      const items = group.items.filter((it) => {
+        if (isNavHidden(it.href)) return false;
+        if (!it.requiredPermission) return true;
+        // Admins see everything; the matrix only ever grants, never revokes,
+        // so an admin's navigation is unchanged.
+        if (userRole === 'admin') return true;
+        if (!isCashierPanel && !delegatedEvents) return true;
+        return capabilities?.[it.requiredPermission] === true;
+      });
       return items.length ? { ...group, items } : null;
     })
     .filter(Boolean);
@@ -484,7 +527,7 @@ export default function AdminLayout({ children }) {
   // Flat list only used when the desktop rail is collapsed to icons.
   const flatItems = navGroups.flatMap((g) => (g.items ? g.items : [g]));
 
-  if (loading) {
+  if (loading && !eventsDelegationAllows) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">

@@ -5,7 +5,7 @@ import { buildBeo, issueRevision, revisionHistory, BEO_AUDIENCE } from '@/lib/ev
 
 export async function GET(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.view' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;
@@ -24,7 +24,7 @@ export async function GET(request, { params }) {
 /** Issue a new revision — append-only; earlier snapshots stay readable. */
 export async function POST(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.manage' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;

@@ -5,7 +5,7 @@ import { finalStatement, finaliseBilling } from '@/lib/events/billing.js';
 
 export async function GET(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.view' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;
@@ -18,7 +18,7 @@ export async function GET(request, { params }) {
 /** Settle and complete. Split payment is simply more than one entry. */
 export async function POST(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.billing' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;

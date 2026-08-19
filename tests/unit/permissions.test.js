@@ -138,3 +138,69 @@ test('non-curated permission keys are unaffected by this system (static map stil
   assert.equal(hasPermission('cashier', 'business_days.force_close'), false);
   assert.equal(hasPermission('kitchen', 'orders.view'), true); // kitchen's static 'orders.view'
 });
+
+/* ------------------------------------------------------------------ events */
+
+const EVENT_KEYS = [
+  'events.view', 'events.manage', 'events.discount', 'events.confirm', 'events.cancel',
+  'events.deposits', 'events.production', 'events.billing', 'events.setup', 'events.reports',
+];
+
+test('every events permission is in the catalogue exactly once, under one category', () => {
+  const events = PERMISSION_CATALOG.filter((p) => p.key.startsWith('events.'));
+  assert.deepEqual(events.map((p) => p.key).sort(), [...EVENT_KEYS].sort());
+  for (const p of events) {
+    assert.equal(p.category, 'Events', `${p.key} should sit in the Events category`);
+    assert.ok(p.label && p.description, `${p.key} needs a label and a description`);
+  }
+});
+
+test('the Events module stays admin-only until an admin delegates it', async () => {
+  invalidatePermissionCache();
+  await ensurePermissionCache(db);
+  for (const key of EVENT_KEYS) {
+    assert.equal(hasPermission('admin', key), true, `admin must always hold ${key}`);
+    for (const role of MANAGED_ROLES) {
+      assert.equal(hasPermission(role, key), false, `${role} must not hold ${key} by default`);
+    }
+  }
+});
+
+test('an events permission can be delegated one key at a time, and only that key', async () => {
+  await setRolePermissions(db, [{ role: 'cashier', key: 'events.view', allowed: true }], admin);
+  invalidatePermissionCache();
+  await ensurePermissionCache(db);
+
+  assert.equal(hasPermission('cashier', 'events.view'), true);
+  // Seeing an event must not imply starting it, billing it or discounting it.
+  for (const key of EVENT_KEYS.filter((k) => k !== 'events.view')) {
+    assert.equal(hasPermission('cashier', key), false, `events.view must not imply ${key}`);
+  }
+  // Nobody else was affected.
+  assert.equal(hasPermission('waiter', 'events.view'), false);
+  assert.equal(hasPermission('kitchen', 'events.view'), false);
+});
+
+test('delegating an events permission is written to the audit trail', async () => {
+  await setRolePermissions(db, [{ role: 'cashier', key: 'events.billing', allowed: true }], admin);
+  const [latest] = await permissionAuditHistory(db, { limit: 1 });
+  assert.equal(latest.permission_key, 'events.billing');
+  assert.equal(latest.role, 'cashier');
+  assert.equal(latest.previous_value, 0);
+  assert.equal(latest.new_value, 1);
+  assert.equal(latest.actor_name, 'Admin One');
+});
+
+test('events permissions are only offered to cashier, so no route can be handed to the kitchen', async () => {
+  // The catalogue entry names cashier, so the update is filtered out; with
+  // nothing valid left the whole batch is rejected rather than silently
+  // writing a row the matrix would never show.
+  await assert.rejects(
+    () => setRolePermissions(db, [{ role: 'kitchen', key: 'events.production', allowed: true }], admin),
+    /No valid permission changes supplied/
+  );
+  invalidatePermissionCache();
+  await ensurePermissionCache(db);
+  assert.equal(hasPermission('kitchen', 'events.production'), false);
+  assert.equal(hasPermission('waiter', 'events.production'), false);
+});

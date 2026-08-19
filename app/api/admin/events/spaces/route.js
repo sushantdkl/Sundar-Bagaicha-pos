@@ -6,7 +6,7 @@ import { findSpaceConflicts, checkCapacity } from '@/lib/events/conflicts.js';
 
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.view' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const q = new URL(request.url).searchParams;
@@ -45,7 +45,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.setup' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const space = await createSpace(db, await request.json(), auth.user);

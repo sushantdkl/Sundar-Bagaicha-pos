@@ -10,7 +10,7 @@ import { eventExpenses } from '@/lib/events/expenses.js';
  */
 export async function GET(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.view' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;

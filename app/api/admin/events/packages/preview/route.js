@@ -9,7 +9,7 @@ import { previewPackagePrice } from '@/lib/events/packages.js';
  */
 export async function POST(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.view' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const body = await request.json();

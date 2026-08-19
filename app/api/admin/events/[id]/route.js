@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import Database from '@/lib/db/index';
-import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
+import { requireAuth, requirePermission, handleRouteError } from '@/lib/api-guard.js';
 import { getEvent, updateEvent, changeEventStatus, cancelEvent } from '@/lib/events/service.js';
 import { eventAuditHistory } from '@/lib/events/audit.js';
 import { listLines } from '@/lib/events/lines.js';
 
 export async function GET(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.view' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;
@@ -28,17 +28,21 @@ export async function GET(request, { params }) {
  */
 export async function PATCH(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.manage' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;
     const body = await request.json();
 
+    // The route is gated on events.manage because that is the common case;
+    // the two riskier intents are checked once the body says which one it is.
     if (body.action === 'cancel') {
+      requirePermission(auth.user, 'events.cancel');
       const event = await cancelEvent(db, id, body.reason, auth.user);
       return NextResponse.json({ message: 'Event cancelled.', event });
     }
     if (body.action === 'status') {
+      requirePermission(auth.user, 'events.confirm');
       // Forward the whole body: a status change can carry a manager override
       // (conflict_override / capacity_override + override_reason).
       const event = await changeEventStatus(db, id, body.status, auth.user, body);

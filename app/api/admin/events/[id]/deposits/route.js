@@ -5,7 +5,7 @@ import { depositSummary, collectDeposit, refundDeposit, voidDeposit } from '@/li
 
 export async function GET(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.view' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;
@@ -18,7 +18,7 @@ export async function GET(request, { params }) {
 /** action: collect (default) | refund | void */
 export async function POST(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.deposits' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;

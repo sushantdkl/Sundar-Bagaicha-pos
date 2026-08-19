@@ -5,7 +5,7 @@ import { getSpace, updateSpace, deactivateSpace, spaceBookings } from '@/lib/eve
 
 export async function GET(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.view' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;
@@ -23,7 +23,7 @@ export async function GET(request, { params }) {
 
 export async function PATCH(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.setup' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;
@@ -37,7 +37,7 @@ export async function PATCH(request, { params }) {
 /** Spaces are retired, never deleted — historical bookings still reference them. */
 export async function DELETE(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.setup' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;

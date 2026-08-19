@@ -6,7 +6,7 @@ import { salesByChannel, eventsReport, profitabilityReport } from '@/lib/events/
 /** report=channels | events | profitability (default: all three) */
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.reports' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const q = new URL(request.url).searchParams;

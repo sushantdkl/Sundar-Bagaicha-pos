@@ -5,7 +5,7 @@ import { getPackage, updatePackage, deactivatePackage } from '@/lib/events/packa
 
 export async function GET(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.view' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;
@@ -17,7 +17,7 @@ export async function GET(request, { params }) {
 
 export async function PATCH(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.setup' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;
@@ -31,7 +31,7 @@ export async function PATCH(request, { params }) {
 /** Deactivated, never deleted — quoted events still reference it. */
 export async function DELETE(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.setup' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;

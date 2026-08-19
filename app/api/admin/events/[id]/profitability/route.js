@@ -6,7 +6,7 @@ import { estimatedProfitability, actualProfitability, getThresholds, setThreshol
 /** basis=estimate (pre-event) | actual (post-event) | both */
 export async function GET(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.reports' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;
@@ -24,7 +24,7 @@ export async function GET(request, { params }) {
 /** Warning thresholds are configuration, not code. */
 export async function PATCH(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.setup' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const thresholds = await setThresholds(db, await request.json());

@@ -5,7 +5,7 @@ import { productionPlan, startEvent, addProductionOrder, eventOrders } from '@/l
 
 export async function GET(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.view' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;
@@ -29,7 +29,7 @@ export async function GET(request, { params }) {
 /** action: start (default) | add_order */
 export async function POST(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.production' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;

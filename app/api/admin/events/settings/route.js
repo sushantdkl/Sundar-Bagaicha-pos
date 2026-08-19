@@ -8,7 +8,7 @@ import {
 
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.view' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     return NextResponse.json({
@@ -22,7 +22,7 @@ export async function GET(request) {
 
 export async function PATCH(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.setup' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const body = await request.json();

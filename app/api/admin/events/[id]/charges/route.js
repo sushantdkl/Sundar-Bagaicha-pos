@@ -6,7 +6,7 @@ import { setEventCharges } from '@/lib/events/lines.js';
 /** Event-level discount, VAT and service charge. */
 export async function PATCH(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { permission: 'events.discount' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const { id } = await params;
