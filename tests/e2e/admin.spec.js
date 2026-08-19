@@ -1,12 +1,18 @@
 import { test, expect } from '@playwright/test';
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'admin';
-const ADMIN_PIN = process.env.E2E_ADMIN_PIN || '1234';
+// No default. A hardcoded PIN silently stops matching the moment the
+// deployment's own is changed, and eight tests then fail at the login step and
+// read as a regression in whatever they were meant to cover.
+const ADMIN_PIN = process.env.E2E_ADMIN_PIN || process.env.ADMIN_PASSWORD || '';
 
 // Sign-in is a staff picker (one button per active user) plus a PIN field —
 // there is no username input. Admin lands on the dashboard (PRIMARY_ROUTE);
 // the counter is reached from there.
 async function loginAsAdmin(page) {
+  if (!ADMIN_PIN) {
+    throw new Error('Set E2E_ADMIN_PIN (or ADMIN_PASSWORD) to the admin PIN of the target deployment before running the admin suite.');
+  }
   await page.goto('/login');
   await page.getByRole('button', { name: ADMIN_USER }).first().click();
   await page.fill('#admin-pin', ADMIN_PIN);
