@@ -22,3 +22,29 @@ test('report SQL uses the same table-less takeaway rule', () => {
   assert.match(sql, /table_number/);
   assert.match(sql, /'takeaway'/);
 });
+
+test('an event order is its own channel, and nothing else changes', () => {
+  // The event branch is additive: it only fires when event_id is present.
+  assert.equal(normalizedOrderType({ event_id: 7, table_id: 3 }), 'event');
+  assert.equal(normalizedOrderType({ event_id: 7, order_type: 'delivery' }), 'event');
+  assert.equal(orderTypeLabel({ event_id: 7 }), 'Event');
+
+  // Every existing shape classifies exactly as before.
+  assert.equal(normalizedOrderType({ event_id: null, table_id: 4 }), 'dine_in');
+  assert.equal(normalizedOrderType({ table_id: 4 }), 'dine_in');
+  assert.equal(normalizedOrderType({ order_type: 'delivery' }), 'delivery');
+  assert.equal(normalizedOrderType({ order_type: 'counter', table_id: null }), 'takeaway');
+});
+
+test('the report SQL classifies event orders first, leaving other rules intact', () => {
+  const sql = normalizedOrderTypeSql('o');
+  assert.match(sql, /o\.event_id IS NOT NULL THEN 'event'/);
+  // The original branches must still be present and in order.
+  assert.match(sql, /'delivery'/);
+  assert.match(sql, /table_id IS NULL/);
+  assert.match(sql, /'takeaway'/);
+  assert.ok(
+    sql.indexOf('event_id IS NOT NULL') < sql.indexOf("= 'delivery'"),
+    'the event branch must be evaluated before the channel rules'
+  );
+});

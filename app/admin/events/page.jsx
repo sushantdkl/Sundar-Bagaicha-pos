@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import AdminLayout from '@/components/admin/admin-layout';
-import { CalendarRange, Plus, RefreshCw, Search, Users } from 'lucide-react';
+import { CalendarRange, Plus, RefreshCw, Search, TrendingUp, Users } from 'lucide-react';
 import { apiJson } from '@/lib/authed-fetch';
 import { nepalDateString } from '@/lib/report-dates';
 import { useToast } from '@/components/ui/toast';
@@ -62,6 +62,7 @@ export default function EventsPage() {
               <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />Refresh
             </button>
             <Link href="/admin/events/calendar" className={BTN}><CalendarRange className="h-4 w-4" />Calendar</Link>
+            <Link href="/admin/events/reports" className={BTN}><TrendingUp className="h-4 w-4" />Reports</Link>
             <Link href="/admin/events/new" className={PRIMARY}><Plus className="h-4 w-4" />New Event</Link>
           </div>
         </div>
