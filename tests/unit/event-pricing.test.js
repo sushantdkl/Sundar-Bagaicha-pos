@@ -234,3 +234,19 @@ test('breakdown lines explain how a progressive total was reached', () => {
   assert.deepEqual(r.breakdown.map((b) => b.price_per_guest), [800, 600]);
   assert.equal(r.breakdown.reduce((s, b) => s + b.amount, 0), r.total);
 });
+
+test('a package line charges the tier total, not a rounded rate times the guests', () => {
+  // 100 guests at 1200 plus 20 at 1000 is exactly 140,000, but the blended
+  // rate is 1,166.666... a head. Multiplying the rounded rate back out gives
+  // 140,000.40, and QA saw a 150,000 quotation billed as 150,000.40.
+  const tiers = [
+    { min_guests: 1, max_guests: 100, price_per_guest: 1200 },
+    { min_guests: 101, max_guests: null, price_per_guest: 1000 },
+  ];
+  const priced = priceForGuests({ pricing_policy: 'progressive', name: 'Buffet' }, tiers, 120);
+  assert.equal(priced.total, 140000);
+  assert.equal(priced.effective_per_guest, 1166.67);
+  assert.notEqual(Math.round(priced.effective_per_guest * 120 * 100) / 100, priced.total,
+    'the rounded rate must not reproduce the total — that is the whole point');
+  assert.equal(priced.breakdown.reduce((s, b) => s + b.amount, 0), 140000);
+});
