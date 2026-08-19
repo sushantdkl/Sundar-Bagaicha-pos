@@ -214,8 +214,8 @@ export async function POST(request) {
         `
         INSERT INTO expenses (
           description, category, amount, expense_date, purchase_date, supplier, notes,
-          payment_method, logged_by, receipt_url, business_day_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          payment_method, logged_by, receipt_url, business_day_id, event_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
         [
           data.description,
@@ -229,6 +229,10 @@ export async function POST(request) {
           auth.user?.id || null,
           data.receipt_url || null,
           businessDayId,
+          // Null for ordinary operating expenses — which is every existing row.
+          // Set only when the cost belongs to one event (decoration, DJ, hired
+          // staff). Accounting is unchanged: the same postExpenseJournal runs.
+          data.event_id ? Number(data.event_id) : null,
         ]
       );
       const row = mapExpenseRow(await tx.get('SELECT * FROM expenses WHERE id = ?', [result.lastInsertRowid]));
