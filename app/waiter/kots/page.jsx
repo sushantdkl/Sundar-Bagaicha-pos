@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/toast'
 import { friendlyFromError } from '@/lib/friendly-message'
 import { formatNepalDateTime } from '@/lib/report-dates.js'
 import { printKot } from '@/lib/pos-print.js'
+import { primeBusinessIdentity } from '@/lib/business-identity.js'
 import OperationalDateFilter from '@/components/ui/operational-date-filter'
 import { operationalDateRange } from '@/lib/operational-date-range'
 
@@ -60,6 +61,7 @@ export default function WaiterKotsPage() {
 
   useEffect(() => {
     apiCall('/api/admin/settings').then((r) => r.json()).then((d) => {
+      primeBusinessIdentity(d.settings || {})
       setPaperSize(d.settings?.receipt_paper_size || d.settings?.kot_paper_size || '80')
     }).catch(() => {})
   }, [apiCall])

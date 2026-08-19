@@ -13,6 +13,7 @@ import { useConfirm } from '@/components/ui/confirm';
 import MenuItemImage from '@/components/menu-item-image';
 import { formatCurrency } from '@/lib/currency';
 import { printKot, printFinalBill, printProforma } from '@/lib/pos-print.js';
+import { primeBusinessIdentity } from '@/lib/business-identity.js';
 import { calculateBillTotals, parseSettingsRates } from '@/lib/billing-totals';
 import {
   emptyCustomerSelection,
@@ -41,6 +42,68 @@ async function api(url, options = {}) {
   try { data = await res.json(); } catch { /* empty */ }
   if (!res.ok) throw Object.assign(new Error(data.error || 'Request failed'), { code: data.code, status: res.status, data });
   return data;
+}
+
+// Stock badges for the items that actually hold countable stock — cigarettes,
+// bottled drinks, spirits. `stock` comes back null for recipe dishes, which is
+// how they stay badge-free.
+const STOCK_TONE = {
+  out: 'bg-red-600 text-white',
+  low: 'bg-amber-500 text-white',
+  ok: 'bg-emerald-600 text-white',
+};
+
+/** Trim float noise: 12 stays 12, 1.5 stays 1.5, 0.30000000004 becomes 0.3. */
+const trimNumber = (n) => {
+  const value = Number(n);
+  if (!Number.isFinite(value)) return '0';
+  return String(Math.round(value * 100) / 100);
+};
+
+/** Card badge: how much of the linked inventory row is left, in its own unit. */
+function stockCountLabel(stock) {
+  if (!stock) return '';
+  if (stock.status === 'out') return 'Out of stock';
+  return `${trimNumber(stock.quantity)}${stock.unit ? ` ${stock.unit}` : ''} left`;
+}
+
+/** Variant row: how many more pours/pieces this specific option has left. */
+function variantStockLabel(stock) {
+  if (!stock) return '';
+  if (stock.servings == null) return stockCountLabel(stock);
+  if (stock.servings <= 0) return 'Out of stock';
+  return `${trimNumber(stock.servings)} left`;
+}
+
+/**
+ * Sold out only when every way of ordering the item is exhausted.
+ *
+ * An option with no stock link is unlimited as far as the POS knows, so its
+ * presence keeps the card live. A recipe dish carries no stock at any level
+ * (`stock` is null throughout) and therefore can never be blocked here — its
+ * raw materials are what get counted, and the kitchen decides what it can
+ * still cook.
+ */
+function isSoldOut(product) {
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  if (!variants.length) return product.stock?.status === 'out';
+  // An option with no inventory link of its own deducts through the menu
+  // item's direct link, which is exactly what product.stock describes — so
+  // that is the shelf it has to be checked against.
+  const shelves = variants.map((v) => v.stock || product.stock);
+  if (shelves.every((shelf) => !shelf)) return false;
+  return shelves.every((shelf) => shelf?.status === 'out');
+}
+
+function StockPill({ stock, className = '' }) {
+  if (!stock) return null;
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none shadow-sm ${STOCK_TONE[stock.status] || STOCK_TONE.ok} ${className}`}
+    >
+      {stockCountLabel(stock)}
+    </span>
+  );
 }
 
 const STATUS_BADGE = {
@@ -200,6 +263,16 @@ export default function AdminPos() {
     } catch (e) { notify(e.message, 'error'); }
   }, [notify]);
 
+  // Stock is drawn down the moment a line hits a real order, so the grid's
+  // counts are refreshed after every line change. Fire-and-forget on purpose —
+  // the cashier should never wait on it, and a stale badge is not worth a
+  // toast, so a failure just leaves the previous numbers in place.
+  const syncStockCounts = useCallback(() => {
+    api('/api/admin/products')
+      .then((data) => setProducts((data.products || []).filter((p) => p.is_available)))
+      .catch(() => { /* keep the counts we already have */ });
+  }, []);
+
   const fetchCategories = useCallback(async () => {
     try {
       const data = await api('/api/restaurant/menu/categories');
@@ -211,6 +284,9 @@ export default function AdminPos() {
     try {
       const data = await api('/api/admin/settings');
       const s = data.settings || data || {};
+      // Every print on this screen — bill, pre-bill, KOT, KOT reprint — reads
+      // the business name from here, so prime it before anything can print.
+      primeBusinessIdentity(s);
       const size = String(s.receipt_paper_size || s.paper_size || '80').replace('mm', '');
       setPaperSize(['58', '80'].includes(size) ? size : '80');
       setSettings({
@@ -218,7 +294,7 @@ export default function AdminPos() {
         service_charge_percentage: Number(s.service_charge_percentage ?? 0),
         esewa_qr_image: s.esewa_qr_image || '',
         bank_qr_image: s.bank_qr_image || '',
-        restaurant_name: s.restaurant_name || 'Restaurant',
+        restaurant_name: s.restaurant_name || '',
         restaurant_address: s.restaurant_address || '',
         vat_number: s.vat_number || '',
         pan_number: s.pan_number || '',
@@ -444,8 +520,29 @@ export default function AdminPos() {
     return allocations;
   }, [amountPaid, customerSelection.customer?.id, paymentMethod, splitPayment]);
 
+  /**
+   * Live stock for a cart line, read back off the grid's product list — the
+   * cart itself carries no stock, so the "+" button would otherwise happily
+   * push a count past zero that the grid tile refuses to sell.
+   */
+  const lineStock = useCallback((line) => {
+    const product = products.find((p) => Number(p.id) === Number(line.menu_item_id));
+    if (!product) return null;
+    if (line.variant_name) {
+      return (product.variants || []).find((v) => v.variant_name === line.variant_name)?.stock || null;
+    }
+    return product.stock;
+  }, [products]);
+
   const addItem = useCallback(async (product, variant = null) => {
     if (!canEdit) return;
+    // Belt and braces: the tile is already disabled, but nothing else may add
+    // an item the shelf cannot supply.
+    const stock = (variant ? variant.stock : null) || product.stock;
+    if (stock?.status === 'out') {
+      notify(`${product.name}${variant ? ` (${variant.variant_name})` : ''} is out of stock.`, 'warning');
+      return;
+    }
     const price = variant ? Number(variant.price ?? 0) : Number(product.price ?? product.base_price ?? 0);
     const variantName = variant?.variant_name || null;
     const displayName = variantName ? `${product.name} (${variantName})` : product.name;
@@ -493,9 +590,10 @@ export default function AdminPos() {
         });
         setWorkspace(data.workspace);
       }
+      syncStockCounts();
     } catch (e) { notify(e.message, 'error'); }
     finally { setBusy(false); }
-  }, [orderId, canEdit, unsentLines, notify]);
+  }, [orderId, canEdit, unsentLines, notify, syncStockCounts]);
 
   const pickProduct = useCallback((product) => {
     if (Array.isArray(product.variants) && product.variants.length > 0) {
@@ -544,11 +642,16 @@ export default function AdminPos() {
       setCustomItem({ name: '', price: '', quantity: 1 });
       setShowCustom(false);
       notify('Custom item added.', 'success');
+      syncStockCounts();
     } catch (e) { notify(e.message, 'error'); }
     finally { setBusy(false); }
-  }, [orderId, canEdit, customItem, notify]);
+  }, [orderId, canEdit, customItem, notify, syncStockCounts]);
 
   const changeQty = useCallback(async (line, delta) => {
+    if (delta > 0 && lineStock(line)?.status === 'out') {
+      notify(`${line.item_name} is out of stock.`, 'warning');
+      return;
+    }
     if (!orderId) {
       setDraftLines((prev) => prev.flatMap((l) => {
         if (l.local_id !== line.local_id) return [l];
@@ -588,9 +691,10 @@ export default function AdminPos() {
         });
         setWorkspace(data.workspace);
       }
+      syncStockCounts();
     } catch (e) { notify(e.message, 'error'); }
     finally { setBusy(false); }
-  }, [orderId, notify, workspace?.reopened]);
+  }, [orderId, notify, workspace?.reopened, syncStockCounts, lineStock]);
 
   const markUnsentAsSent = useCallback(async () => {
     if (!orderId || !unsentLines.length) return;
@@ -649,9 +753,14 @@ export default function AdminPos() {
         id = created.workspace?.order?.order_id || created.workspace?.order?.id || created.order_id;
         if (!id) throw new Error('Could not open the order for KOT.');
         if (draftLines.length) {
+          // variant_name has to survive the hand-off: the server rebuilds the
+          // display name from it and, more importantly, the stock deduction
+          // keys off it to draw the right pour size out of the right bottle.
+          // Dropping it billed a peg but deducted against the menu item.
           const items = draftLines.map((l) => ({
             menu_item_id: l.menu_item_id || undefined,
             item_name: l.menu_item_id ? undefined : l.item_name,
+            variant_name: l.variant_name || undefined,
             price: l.price,
             quantity: l.quantity,
           }));
@@ -936,9 +1045,10 @@ export default function AdminPos() {
       if (data.cancellation_kot) printKot(data.cancellation_kot, { size: paperSize });
       notify('Item cancelled.', 'success');
       setCancelTarget(null);
+      syncStockCounts();
     } catch (e) { notify(e.message, 'error'); }
     finally { setBusy(false); }
-  }, [cancelTarget, orderId, paperSize, notify]);
+  }, [cancelTarget, orderId, paperSize, notify, syncStockCounts]);
 
   if (booting) {
     return (
@@ -1119,21 +1229,26 @@ export default function AdminPos() {
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-4">
-              {filteredProducts.map((product) => (
+              {filteredProducts.map((product) => {
+                const soldOut = isSoldOut(product);
+                return (
                 <button
                   key={product.id}
                   type="button"
-                  disabled={busy || !canEdit}
+                  disabled={busy || !canEdit || soldOut}
                   onClick={() => pickProduct(product)}
-                  className="bg-white rounded-xl border border-blue-100 p-3 sm:p-4 text-left active:scale-[0.98] hover:border-blue-400 hover:shadow-md transition-transform overflow-hidden disabled:opacity-50"
+                  className={`bg-white rounded-xl border p-3 sm:p-4 text-left transition-transform overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed ${
+                    soldOut ? 'border-red-200 bg-red-50/40' : 'border-blue-100 active:scale-[0.98] hover:border-blue-400 hover:shadow-md'
+                  }`}
                 >
-                  <div className="aspect-square rounded-lg mb-2 overflow-hidden bg-stone-100">
+                  <div className="relative aspect-square rounded-lg mb-2 overflow-hidden bg-stone-100">
                     <MenuItemImage
                       src={product.image_url}
                       alt={product.name}
                       size="card"
-                      className="rounded-lg w-full h-full"
+                      className={`rounded-lg w-full h-full ${product.stock?.status === 'out' ? 'grayscale opacity-60' : ''}`}
                     />
+                    <StockPill stock={product.stock} className="absolute top-1.5 right-1.5 max-w-[calc(100%-0.75rem)] truncate" />
                   </div>
                   <h3 className="font-semibold text-slate-900 text-xs sm:text-sm line-clamp-2 min-h-[2.5rem]">{product.name}</h3>
                   <p className="text-[11px] text-slate-500 truncate mb-1">{product.category_name || product.category || 'Menu'}</p>
@@ -1143,7 +1258,8 @@ export default function AdminPos() {
                     <p className="text-base sm:text-lg font-bold text-blue-600">{formatCurrency(product.price || product.base_price || 0)}</p>
                   )}
                 </button>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -1160,17 +1276,46 @@ export default function AdminPos() {
             </div>
             <p className="text-sm text-stone-500 mb-3">Choose an option</p>
             <div className="space-y-2">
-              {variantPicker.variants.map((variant) => (
+              {variantPicker.variants.map((variant) => {
+                // Same fallback the deduction uses: an option without its own
+                // link draws on the menu item's shelf.
+                const shelf = variant.stock || variantPicker.stock;
+                const outOfStock = shelf?.status === 'out';
+                return (
                 <button
                   key={variant.id}
                   type="button"
+                  disabled={outOfStock}
                   onClick={() => { addItem(variantPicker, variant); setVariantPicker(null); }}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-stone-200 hover:border-blue-400 hover:bg-blue-50 active:scale-[0.98] transition-transform"
+                  className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-transform disabled:opacity-50 disabled:cursor-not-allowed ${
+                    outOfStock
+                      ? 'border-red-200 bg-red-50/40'
+                      : 'border-stone-200 hover:border-blue-400 hover:bg-blue-50 active:scale-[0.98]'
+                  }`}
                 >
-                  <span className="font-medium text-stone-900">{variant.variant_name}</span>
-                  <span className="font-bold text-blue-600">{formatCurrency(variant.price || 0)}</span>
+                  <span className="min-w-0 text-left">
+                    <span className="block font-medium text-stone-900 truncate">{variant.variant_name}</span>
+                    {shelf && (
+                      <span
+                        className={`block text-[11px] font-semibold ${
+                          shelf.status === 'out'
+                            ? 'text-red-600'
+                            : shelf.status === 'low'
+                              ? 'text-amber-600'
+                              : 'text-emerald-600'
+                        }`}
+                      >
+                        {variantStockLabel(shelf)}
+                        {shelf.per_unit
+                          ? ` · ${trimNumber(shelf.quantity)} ${shelf.unit} in stock`
+                          : ''}
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-bold text-blue-600 flex-shrink-0">{formatCurrency(variant.price || 0)}</span>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

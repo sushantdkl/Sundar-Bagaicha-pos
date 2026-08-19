@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import Database from '@/lib/db/index';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
 import { ensureMenuVariantsSchema, getVariantsByMenuItemIds, replaceVariants } from '@/lib/menu-variants.js';
+import { attachStockLevels } from '@/lib/stock.js';
 
 async function syncInventoryLink(db, menuItemId, inventoryItemId) {
   const inventoryId = inventoryItemId === '' || inventoryItemId == null ? null : Number(inventoryItemId);
@@ -40,6 +41,10 @@ export async function GET(request) {
 
     const variantsByItem = await getVariantsByMenuItemIds(db, products.map((p) => p.id));
     for (const product of products) product.variants = variantsByItem.get(product.id) || [];
+
+    // Live counts for the stock-backed items (cigarettes, bottled drinks,
+    // spirits). The POS grid reads these; recipe dishes come back with null.
+    await attachStockLevels(db, products);
 
     return NextResponse.json({ products });
   } catch (error) {

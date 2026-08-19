@@ -13,6 +13,7 @@ import { useConfirm } from '@/components/ui/confirm'
 import { formatElapsed } from '@/lib/restaurant-status'
 import { formatNepalClock } from '@/lib/time-utils'
 import { printKot, printProforma } from '@/lib/pos-print.js'
+import { primeBusinessIdentity } from '@/lib/business-identity.js'
 import { tableBoardState, computeTableStatusCounts, DashboardTableCard } from '@/components/tables/table-room-board'
 
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
@@ -113,7 +114,10 @@ export default function WaiterOrderPage() {
       return
     }
     load()
-    apiCall('/api/admin/settings').then((r) => r.json()).then((d) => setSettings(d.settings || {})).catch(() => {})
+    apiCall('/api/admin/settings').then((r) => r.json()).then((d) => {
+      primeBusinessIdentity(d.settings || {})
+      setSettings(d.settings || {})
+    }).catch(() => {})
     const t = setInterval(load, 5000)
     return () => clearInterval(t)
   }, [orderId, authLoading, token])

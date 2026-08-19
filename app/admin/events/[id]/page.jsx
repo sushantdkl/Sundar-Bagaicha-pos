@@ -15,7 +15,7 @@ import Quotation from './quotation';
 export default function EventDetailPage() {
   const { id } = useParams();
   const { addToast } = useToast();
-  const confirm = useConfirm();
+  const { confirm } = useConfirm();
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState(false);
   const [edit, setEdit] = useState(null);

@@ -17,7 +17,7 @@ const EMPTY = {
 
 export default function EventSpacesPage() {
   const { addToast } = useToast();
-  const confirm = useConfirm();
+  const { confirm } = useConfirm();
   const [spaces, setSpaces] = useState([]);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState(null);

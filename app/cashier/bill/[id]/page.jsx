@@ -18,6 +18,7 @@ import { calculateBillTotals, parseSettingsRates } from '@/lib/billing-totals';
 import { useConfirm } from '@/components/ui/confirm';
 import { useAuth } from '@/lib/auth-context';
 import { printFinalBill, printProforma } from '@/lib/pos-print.js';
+import { primeBusinessIdentity } from '@/lib/business-identity.js';
 import { formatNepalTime } from '@/lib/time-utils';
 
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -79,6 +80,7 @@ export default function BillDetailsPage({ params }) {
       if (res.ok) {
         const data = await res.json();
         const s = data.settings || {};
+        primeBusinessIdentity(s);
         setSettings({
           ...s,
           vat_percentage: Number(s.vat_percentage ?? 13),

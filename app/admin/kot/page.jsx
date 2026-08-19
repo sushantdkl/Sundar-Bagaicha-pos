@@ -19,6 +19,7 @@ import DateRangeFilter from '@/components/ui/date-range-filter';
 import { formatNepalDateTime } from '@/lib/report-dates.js';
 import { compactOrderNumber } from '@/lib/document-display.js';
 import { printKot, printProforma } from '@/lib/pos-print.js';
+import { primeBusinessIdentity } from '@/lib/business-identity.js';
 
 function token() {
   return typeof window === 'undefined' ? '' : localStorage.getItem('pos_token') || '';
@@ -102,6 +103,7 @@ export default function AdminKotPage() {
       try {
         const data = await api('/api/admin/settings');
         const s = data.settings || data || {};
+        primeBusinessIdentity(s);
         const size = String(s.receipt_paper_size || s.paper_size || '80').replace('mm', '');
         setPaperSize(['58', '80'].includes(size) ? size : '80');
       } catch { /* defaults */ }

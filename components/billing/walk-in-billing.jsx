@@ -371,9 +371,13 @@ export default function WalkInBilling({ variant = 'admin' }) {
         <meta charset="UTF-8">
         <title>Bill - ${billData.bill_number}</title>
         <style>
+          /* Margin only. "size: 72mm auto" is invalid CSS — Paged Media allows
+             <length>{1,2} or the bare keyword "auto", never a mix — so Chromium
+             dropped the whole declaration and fell back to A4, feeding a page
+             of blank paper after every bill. The real height is measured and
+             written in below. */
           @media print {
             @page {
-              size: 72mm auto;
               margin: 0;
             }
           }
@@ -566,16 +570,28 @@ export default function WalkInBilling({ variant = 'admin' }) {
           <div>Please come again</div>
         </div>
 
-        <div style="height: 10mm;"></div>
-
         <script>
+          // Thermal roll: the page has to be exactly as tall as the bill, or the
+          // printer feeds the remainder of a default A4 sheet as blank paper.
+          function sizePage() {
+            // The body only: documentElement.scrollHeight is floored at the
+            // print window's viewport and would pad short bills with blank paper.
+            var b = document.body;
+            var px = Math.ceil(b.getBoundingClientRect().height) || b.scrollHeight || 0;
+            var mm = Math.max(20, Math.ceil(px * 25.4 / 96) + 2); // 1in = 96px = 25.4mm
+            var st = document.createElement('style');
+            st.appendChild(document.createTextNode('@page { size: 72mm ' + mm + 'mm; margin: 0; }'));
+            document.head.appendChild(st);
+          }
+
           // Prevent double printing
           let printed = false;
-          
+
           // Single print trigger
           window.onload = function() {
             if (!printed) {
               printed = true;
+              sizePage();
               window.focus();
               window.print();
               // Close after user finishes printing

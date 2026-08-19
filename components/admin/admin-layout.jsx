@@ -13,6 +13,60 @@ import {
 import LogoutButton from '@/components/ui/logout-button';
 import { isNavHidden } from '@/lib/deployment';
 
+// Each sidebar group carries its own light wash so the eye lands on the right
+// block without reading every label. Written out in full because Tailwind only
+// sees class names it can find as literals — never build these by interpolation.
+const NAV_TINTS = {
+  amber: {
+    wrap: 'bg-amber-50/80 border-amber-100',
+    head: 'text-amber-800 hover:bg-amber-100/70',
+    item: 'hover:bg-amber-100/60 active:bg-amber-100/80',
+    active: 'bg-white border-amber-500 shadow-sm',
+  },
+  fuchsia: {
+    wrap: 'bg-fuchsia-50/80 border-fuchsia-100',
+    head: 'text-fuchsia-800 hover:bg-fuchsia-100/70',
+    item: 'hover:bg-fuchsia-100/60 active:bg-fuchsia-100/80',
+    active: 'bg-white border-fuchsia-500 shadow-sm',
+  },
+  blue: {
+    wrap: 'bg-blue-50/80 border-blue-100',
+    head: 'text-blue-800 hover:bg-blue-100/70',
+    item: 'hover:bg-blue-100/60 active:bg-blue-100/80',
+    active: 'bg-white border-blue-500 shadow-sm',
+  },
+  indigo: {
+    wrap: 'bg-indigo-50/80 border-indigo-100',
+    head: 'text-indigo-800 hover:bg-indigo-100/70',
+    item: 'hover:bg-indigo-100/60 active:bg-indigo-100/80',
+    active: 'bg-white border-indigo-500 shadow-sm',
+  },
+  emerald: {
+    wrap: 'bg-emerald-50/80 border-emerald-100',
+    head: 'text-emerald-800 hover:bg-emerald-100/70',
+    item: 'hover:bg-emerald-100/60 active:bg-emerald-100/80',
+    active: 'bg-white border-emerald-500 shadow-sm',
+  },
+  teal: {
+    wrap: 'bg-teal-50/80 border-teal-100',
+    head: 'text-teal-800 hover:bg-teal-100/70',
+    item: 'hover:bg-teal-100/60 active:bg-teal-100/80',
+    active: 'bg-white border-teal-500 shadow-sm',
+  },
+  violet: {
+    wrap: 'bg-violet-50/80 border-violet-100',
+    head: 'text-violet-800 hover:bg-violet-100/70',
+    item: 'hover:bg-violet-100/60 active:bg-violet-100/80',
+    active: 'bg-white border-violet-500 shadow-sm',
+  },
+  slate: {
+    wrap: 'bg-slate-50/80 border-slate-200',
+    head: 'text-slate-600 hover:bg-slate-100',
+    item: 'hover:bg-slate-100/70 active:bg-slate-100',
+    active: 'bg-white border-slate-500 shadow-sm',
+  },
+};
+
 function readPanelAuthSync() {
   if (typeof window === 'undefined') return false;
   try {
@@ -349,6 +403,7 @@ export default function AdminLayout({ children }) {
     { icon: ScrollText, label: 'Summary', href: '/admin/summary-report', color: 'text-rose-700' },
     {
       label: 'Operations',
+      tint: 'amber',
       items: [
         { icon: BellRing, label: 'Waiter Calls', href: '/admin/waiter-requests', color: 'text-amber-700', badge: waiterCallsBadge },
         { icon: Inbox, label: 'Host desk', href: '/admin/leads', color: 'text-amber-600', badge: leadsBadge },
@@ -363,6 +418,7 @@ export default function AdminLayout({ children }) {
     },
     {
       label: 'Events',
+      tint: 'fuchsia',
       items: [
         { icon: PartyPopper, label: 'Events Dashboard', href: '/admin/events', color: 'text-fuchsia-700', requiredPermission: 'events.view' },
         { icon: CalendarRange, label: 'Events Calendar', href: '/admin/events/calendar', color: 'text-violet-600', requiredPermission: 'events.view' },
@@ -373,6 +429,7 @@ export default function AdminLayout({ children }) {
     },
     {
       label: 'Menu',
+      tint: 'blue',
       items: [
         { icon: Package, label: 'Menu', href: '/admin/products', color: 'text-blue-600' },
         { icon: FolderOpen, label: 'Categories', href: '/admin/categories', color: 'text-purple-600' },
@@ -381,6 +438,7 @@ export default function AdminLayout({ children }) {
     },
     {
       label: 'Inventory',
+      tint: 'indigo',
       items: [
         { icon: Gauge, label: 'Inventory Dashboard', href: '/admin/inventory/dashboard', color: 'text-indigo-700' },
         { icon: Warehouse, label: 'Inventory', href: '/admin/inventory', color: 'text-indigo-600' },
@@ -393,6 +451,7 @@ export default function AdminLayout({ children }) {
     },
     {
       label: 'People',
+      tint: 'emerald',
       items: [
         { icon: Users, label: 'Employees', href: '/admin/employees', color: 'text-green-600' },
         { icon: WalletCards, label: 'Salary & Advances', href: '/admin/payroll', color: 'text-emerald-700' },
@@ -402,6 +461,7 @@ export default function AdminLayout({ children }) {
     },
     {
       label: 'Finance',
+      tint: 'teal',
       items: [
         { icon: Wallet, label: 'Expenses', href: '/admin/expenses', color: 'text-emerald-600' },
         { icon: PiggyBank, label: 'Savings & Deposits', href: '/admin/savings', color: 'text-sky-700' },
@@ -412,6 +472,7 @@ export default function AdminLayout({ children }) {
     },
     {
       label: 'Accounting',
+      tint: 'violet',
       items: [
         { icon: CalendarClock, label: 'Opening & Closing', href: '/admin/business-days', color: 'text-emerald-700' },
         { icon: Gauge, label: 'Finance Dashboard', href: '/admin/finance-dashboard', color: 'text-gray-900' },
@@ -439,6 +500,7 @@ export default function AdminLayout({ children }) {
     { icon: LayoutDashboard, label: 'Order Desk', href: '/cashier', color: 'text-gray-700' },
     {
       label: 'Ledgers',
+      tint: 'teal',
       items: [
         { icon: Receipt, label: 'Customer Ledger', href: '/cashier/accounts-receivable', color: 'text-teal-700' },
         { icon: Receipt, label: 'Supplier Ledger', href: '/cashier/accounts-payable', color: 'text-orange-700' },
@@ -446,6 +508,7 @@ export default function AdminLayout({ children }) {
     },
     {
       label: 'Operations',
+      tint: 'amber',
       items: [
         { icon: BellRing, label: 'Waiter Calls', href: '/cashier/waiter-requests', color: 'text-amber-700', badge: waiterCallsBadge },
         { icon: Inbox, label: 'Online Orders', href: '/cashier/online-orders', color: 'text-amber-600', badge: ordersBadge },
@@ -457,6 +520,7 @@ export default function AdminLayout({ children }) {
     },
     {
       label: 'Records',
+      tint: 'indigo',
       items: [
         { icon: Users, label: 'Customers', href: '/cashier/customers', color: 'text-pink-600' },
         { icon: Warehouse, label: 'Inventory', href: '/cashier/inventory', color: 'text-indigo-600' },
@@ -468,6 +532,7 @@ export default function AdminLayout({ children }) {
     },
     {
       label: 'Cash & Credit',
+      tint: 'emerald',
       items: [
         { icon: Wallet, label: 'Expenses', href: '/cashier/expenses', color: 'text-emerald-600' },
         { icon: ArrowRightLeft, label: 'Cash Exchange', href: '/cashier/cash-exchange', color: 'text-amber-600' },
@@ -540,17 +605,19 @@ export default function AdminLayout({ children }) {
 
   const showLabels = sidebarOpen || !isDesktop;
 
-  const renderNavButton = (item, topLevel) => {
+  const renderNavButton = (item, topLevel, tint = null) => {
     const isActive = isActiveHref(item.href);
+    const resting = tint ? tint.item : 'active:bg-gray-50 hover:bg-gray-50';
+    const selected = tint ? tint.active : 'bg-gray-100 border-gray-800';
     return (
       <button
         key={item.href}
         type="button"
         onClick={() => navigate(item.href)}
         className={`w-full flex items-center ${
-          showLabels ? `space-x-3 ${topLevel ? 'px-4' : 'pl-8 pr-4'}` : 'justify-center px-2'
+          showLabels ? `space-x-3 ${topLevel ? 'px-4' : 'pl-7 pr-3'}` : 'justify-center px-2'
         } py-2.5 rounded-lg text-left relative ${
-          isActive ? 'bg-gray-100 border-l-4 border-gray-800' : 'active:bg-gray-50 hover:bg-gray-50'
+          isActive ? `border-l-4 ${selected}` : resting
         }`}
       >
         <item.icon className={`${item.color} ${showLabels ? 'w-5 h-5' : 'w-6 h-6'} flex-shrink-0`} />
@@ -628,7 +695,7 @@ export default function AdminLayout({ children }) {
         <nav
           ref={attachNavScroll}
           onScroll={saveNavScroll}
-          className="flex-1 overflow-y-auto overscroll-contain p-3 space-y-1"
+          className="flex-1 overflow-y-auto overscroll-contain p-3 space-y-1.5"
         >
           {showLabels
             ? navGroups.map((group) => {
@@ -636,12 +703,13 @@ export default function AdminLayout({ children }) {
                 const hasActive = group.items.some((it) => isActiveHref(it.href));
                 const expanded = openGroups[group.label] ?? hasActive;
                 const groupBadge = group.items.reduce((n, it) => n + (it.badge || 0), 0);
+                const tint = NAV_TINTS[group.tint] || NAV_TINTS.slate;
                 return (
-                  <div key={group.label}>
+                  <div key={group.label} className={`rounded-xl border p-1 ${tint.wrap}`}>
                     <button
                       type="button"
                       onClick={() => toggleGroup(group.label)}
-                      className="w-full flex items-center gap-2 px-4 py-2 rounded-lg text-left text-xs font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-50"
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs font-semibold uppercase tracking-wide ${tint.head}`}
                     >
                       <span className="flex-1">{group.label}</span>
                       {!expanded && groupBadge > 0 && (
@@ -655,7 +723,7 @@ export default function AdminLayout({ children }) {
                     </button>
                     {expanded && (
                       <div className="mt-1 space-y-1">
-                        {group.items.map((item) => renderNavButton(item, false))}
+                        {group.items.map((item) => renderNavButton(item, false, tint))}
                       </div>
                     )}
                   </div>

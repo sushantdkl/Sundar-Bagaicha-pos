@@ -29,7 +29,7 @@ const EMPTY = {
 
 export default function EventPackagesPage() {
   const { addToast } = useToast();
-  const confirm = useConfirm();
+  const { confirm } = useConfirm();
   const [packages, setPackages] = useState([]);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState(null);
