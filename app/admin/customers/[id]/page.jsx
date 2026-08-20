@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/admin-layout';
-import { ArrowLeft, Phone, Mail, MapPin, CreditCard, Receipt, ShoppingBag, Loader2, Tag } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, MapPin, CreditCard, Receipt, ShoppingBag, Loader2, Tag, Printer } from 'lucide-react';
 import { formatNepalDateTime } from '@/lib/report-dates.js';
 import { formatCurrency } from '@/lib/currency';
 import { orderTypeLabel } from '@/lib/order-types';
@@ -12,6 +12,8 @@ import { useToast } from '@/components/ui/toast';
 import { friendlyMessage, friendlyFromError } from '@/lib/friendly-message';
 import { adminInputClass } from '@/components/ui/admin-form';
 import QrEnlargeModal from '@/components/billing/qr-enlarge-modal';
+import { printFinalBill, printFinalBills } from '@/lib/pos-print.js';
+import { receiptFromBillDetail } from '@/lib/bill-receipt.js';
 
 const QR_PROVIDERS = ['Fonepay', 'eSewa', 'Khalti', 'Bank QR', 'Other'];
 const INPUT = adminInputClass;
@@ -47,6 +49,7 @@ export default function CustomerProfilePage() {
   const [form, setForm] = useState({ amount: '', method: 'cash', bank_account_id: '', qrProvider: 'Fonepay', note: '' });
   const [busy, setBusy] = useState(false);
   const keyRef = useRef(newKey());
+  const [printing, setPrinting] = useState(null); // bill id, or 'all'
 
   useEffect(() => {
     apiJson('/api/admin/settings').then((r) => setSettings(r.settings || {})).catch(() => {});
@@ -69,6 +72,67 @@ export default function CustomerProfilePage() {
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
+
+  /**
+   * Fetch one bill in the full shape the receipt template needs, and record the
+   * reprint. The audit call is deliberately not swallowed: a copy of a bill
+   * leaving the building is exactly the kind of thing the trail exists for, so
+   * if it cannot be recorded, nothing is printed.
+   */
+  const loadReceipt = useCallback(async (billId) => {
+    await apiJson(`/api/admin/bills/${billId}`, { method: 'POST', body: JSON.stringify({ action: 'reprint', kind: 'final' }) });
+    const { bill } = await apiJson(`/api/admin/bills/${billId}`);
+    const receipt = receiptFromBillDetail(bill, settings);
+    if (!receipt?.items?.length) throw new Error(`${bill?.billNumber || 'That bill'} has no items to print.`);
+    return receipt;
+  }, [settings]);
+
+  const printOne = useCallback(async (billId, billNumber) => {
+    setPrinting(String(billId));
+    try {
+      const receipt = await loadReceipt(billId);
+      printFinalBill(receipt, { size: settings.receipt_paper_size || '80', reprint: true });
+    } catch (e) {
+      addToast({ type: 'error', title: `Could not print ${billNumber || 'the bill'}`, description: friendlyFromError(e) });
+    } finally {
+      setPrinting(null);
+    }
+  }, [loadReceipt, settings, addToast]);
+
+  /**
+   * Every credit bill still owing, in one print job. This is the pile a
+   * customer is handed when they come in to settle: printing them one at a
+   * time means one dialog each, and it is easy to miss one.
+   */
+  const printCreditBills = useCallback(async (creditBills) => {
+    if (!creditBills.length) return;
+    setPrinting('all');
+    try {
+      const receipts = [];
+      const failed = [];
+      for (const b of creditBills) {
+        try {
+          receipts.push(await loadReceipt(b.id));
+        } catch (e) {
+          failed.push(`${b.bill_number}: ${friendlyFromError(e)}`);
+        }
+      }
+      if (!receipts.length) {
+        addToast({ type: 'error', title: 'Nothing could be printed', description: failed.join('; ') });
+        return;
+      }
+      printFinalBills(receipts, { size: settings.receipt_paper_size || '80', title: 'Credit bills' });
+      // A partial batch is reported rather than passed off as complete — the
+      // operator needs to know which bill is missing from the pile.
+      if (failed.length) {
+        addToast({ type: 'warning', title: `${receipts.length} of ${creditBills.length} bills printed`, description: failed.join('; ') });
+      } else {
+        addToast({ type: 'success', title: `${receipts.length} credit bill(s) sent to the printer` });
+      }
+    } finally {
+      setPrinting(null);
+    }
+  }, [loadReceipt, settings, addToast]);
 
   if (loading) {
     return (
@@ -94,6 +158,10 @@ export default function CustomerProfilePage() {
   }
 
   const { customer, summary, orders, bills, ledger, payments, outstanding_bills } = data;
+  // The pile a customer is handed when they come in to settle: every bill that
+  // went out on credit, newest first.
+  const creditBills = (bills || []).filter((b) => b.was_credit);
+  const creditOutstanding = creditBills.reduce((sum, b) => sum + Number(b.outstanding_amount || 0), 0);
 
   const openPay = (mode) => {
     setPayFor(mode);
@@ -222,7 +290,7 @@ export default function CustomerProfilePage() {
               <SimpleTable
                 router={router}
                 empty="No bills yet."
-                headers={['Bill', 'Order', 'Total', 'Outstanding', 'Status', 'When (NPT)']}
+                headers={['Bill', 'Order', 'Total', 'Outstanding', 'Status', 'When (NPT)', '']}
                 rows={bills.map((b) => ({
                   href: b.order_id ? `/admin/orders/${b.order_id}` : undefined,
                   cells: [
@@ -235,12 +303,30 @@ export default function CustomerProfilePage() {
                     formatCurrency(b.outstanding_amount || 0),
                     <span key="status" className="capitalize">{String(b.payment_status || b.status || '').replace(/_/g, ' ')}</span>,
                     formatNepalDateTime(b.created_at),
+                    <PrintBillButton key="print" busy={printing === String(b.id)} onPrint={() => printOne(b.id, b.bill_number)} />,
                   ],
                 }))}
               />
             </>
           )}
           {tab === 'ledger' && (
+            <>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2">
+                <p className="text-sm text-gray-600">
+                  {creditBills.length
+                    ? `${creditBills.length} bill(s) were sold on credit, ${formatCurrency(creditOutstanding)} still outstanding.`
+                    : 'No bill has been sold to this customer on credit.'}
+                </p>
+                <button
+                  type="button"
+                  disabled={!creditBills.length || printing === 'all'}
+                  onClick={() => printCreditBills(creditBills)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {printing === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                  Print all credit bills
+                </button>
+              </div>
             <SimpleTable
               empty="No credit ledger entries."
               headers={['When (NPT)', 'Type', 'Invoice', 'Debit', 'Credit', 'Balance', 'Note']}
@@ -254,6 +340,7 @@ export default function CustomerProfilePage() {
                 e.note || e.reference || '—',
               ])}
             />
+            </>
           )}
           {tab === 'payments' && (
             <SimpleTable
@@ -359,6 +446,25 @@ function Stat({ label, value, tone }) {
       <p className="text-[11px] uppercase tracking-wide text-gray-400">{label}</p>
       <p className={`mt-0.5 font-semibold tabular-nums ${color}`}>{value}</p>
     </div>
+  );
+}
+
+/**
+ * Reprints one bill. stopPropagation because the row itself navigates to the
+ * order — a click meant for the printer must not also change the page.
+ */
+function PrintBillButton({ busy, onPrint }) {
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={(e) => { e.stopPropagation(); onPrint(); }}
+      title="Print a copy of this bill"
+      className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+    >
+      {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
+      Print
+    </button>
   );
 }
 

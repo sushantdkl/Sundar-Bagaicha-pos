@@ -67,6 +67,7 @@ const TABS = [
   { id: 'tables', label: 'Tables' },
   { id: 'reservations', label: 'Reservations' },
   { id: 'suppliers', label: 'Suppliers' },
+  { id: 'events', label: 'Event Sales' },
 ];
 
 const PERIODS = [
@@ -700,6 +701,32 @@ function TabCharts({ tab, data }) {
             <BarChart data={c.busyDays} color="amber" format="number" />
           </ChartCard>
         </ChartGrid>
+      </>
+    );
+  }
+
+  if (tab === 'events') {
+    return (
+      <>
+        <ChartCard
+          title="Event Sales Over Time"
+          hint="Recognised on the day an event is settled, not the day it was booked"
+          isEmpty={allZero(c.overTime)}
+          empty="No event was settled in the selected period."
+        >
+          <TrendChart data={c.overTime} color="violet" />
+        </ChartCard>
+        <ChartGrid>
+          <ChartCard title="Restaurant vs Events" hint="The two sales channels of one business" isEmpty={allZero(c.channelSplit)} empty="Nothing was sold in this period.">
+            <BarChart data={c.channelSplit} color="emerald" />
+          </ChartCard>
+          <ChartCard title="Sales by Event Type" isEmpty={!c.byType?.length} empty="No event was completed in this period.">
+            <RankBars data={c.byType} color="violet" />
+          </ChartCard>
+        </ChartGrid>
+        <ChartCard title="Package Mix" hint="By contracted value on completed events" isEmpty={!c.byPackage?.length} empty="No package was sold on a completed event in this period.">
+          <RankBars data={c.byPackage} color="amber" />
+        </ChartCard>
       </>
     );
   }
