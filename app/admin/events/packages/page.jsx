@@ -7,7 +7,7 @@ import { AlertTriangle, ArrowLeft, Calculator, Pencil, Plus, RefreshCw, Trash2, 
 import { apiJson } from '@/lib/authed-fetch';
 import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/confirm';
-import { money, errText } from '../event-ui';
+import { money, errText, useEventsBasePath } from '../event-ui';
 import ComponentsEditor from './components-editor';
 
 const POLICY_LABEL = {
@@ -28,6 +28,7 @@ const EMPTY = {
 };
 
 export default function EventPackagesPage() {
+  const eventsBase = useEventsBasePath();
   const { addToast } = useToast();
   const { confirm } = useConfirm();
   const [packages, setPackages] = useState([]);
@@ -102,7 +103,7 @@ export default function EventPackagesPage() {
   return (
     <AdminLayout>
       <header className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6 lg:px-8">
-        <Link href="/admin/events" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
+        <Link href={eventsBase} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
           <ArrowLeft className="h-4 w-4" />Events
         </Link>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">

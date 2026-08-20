@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import AdminLayout from '@/components/admin/admin-layout';
 import { formatValue } from '@/components/admin/report-kit';
 import { formatNepalDateTime } from '@/lib/report-dates.js';
@@ -31,6 +32,8 @@ const STATUS_META = {
 };
 
 export default function InventoryDashboardPage() {
+  const pathname = usePathname();
+  const inventoryBase = pathname?.startsWith('/cashier') ? '/cashier/inventory' : '/admin/inventory';
   const [period, setPeriod] = useState('week');
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('');
@@ -228,7 +231,7 @@ function LowStockPanel({ items }) {
               <div className="shrink-0 text-right">
                 <p className="text-sm font-semibold tabular-nums text-amber-600">{i.quantity} {i.unit}</p>
                 <p className="text-xs text-gray-500">need {i.shortage} {i.unit} (min {i.threshold})</p>
-                <Link href={`/admin/inventory/${i.id}`} className="mt-0.5 inline-flex items-center gap-0.5 text-xs text-indigo-600 hover:underline">
+                <Link href={`${inventoryBase}/${i.id}`} className="mt-0.5 inline-flex items-center gap-0.5 text-xs text-indigo-600 hover:underline">
                   Adjust <ExternalLink className="h-3 w-3" />
                 </Link>
               </div>
@@ -251,7 +254,7 @@ function OutOfStockPanel({ items }) {
                 <p className="truncate text-sm font-medium text-gray-900">{i.name}</p>
                 <p className="text-xs text-gray-500">{i.category} · min {i.threshold} {i.unit}</p>
               </div>
-              <Link href={`/admin/inventory/${i.id}`} className="shrink-0 rounded-lg bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-100">
+              <Link href={`${inventoryBase}/${i.id}`} className="shrink-0 rounded-lg bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-100">
                 Restock
               </Link>
             </li>

@@ -9,6 +9,7 @@ import { buildWhatsAppOrderMessage, buildWhatsAppOrderUrl } from '@/lib/whatsapp
 import { compactOrderNumber } from '@/lib/document-display.js';
 
 const CART_KEY = 'dsp_cart_v1';
+const MINIMUM_ONLINE_ORDER = 500;
 const lineKey = (item, variant) => `${item.id}${variant ? `:${variant.name}` : ''}`;
 
 function MenuCard({ item, onAdd }) {
@@ -108,6 +109,11 @@ export default function MenuBrowser({ categories, whatsappNumber, deliveryPricin
   const validateCheckout = () => {
     const errors = {};
     const digits = phone.replace(/\D/g, '');
+    if (cartTotal < MINIMUM_ONLINE_ORDER) {
+      setFieldErrors(errors);
+      setOrderErr(`Minimum online order is ${formatMenuPrice(MINIMUM_ONLINE_ORDER)}. Add ${formatMenuPrice(MINIMUM_ONLINE_ORDER - cartTotal)} more.`);
+      return false;
+    }
     if (!name.trim()) errors.name = 'Please enter your name.';
     if (/[A-Za-z]/.test(phone) || digits.length < 10 || digits.length > 15) errors.phone = 'Please enter a valid phone number.';
     if (orderType === 'delivery' && !location.trim()) errors.location = 'Please enter a delivery location.';
@@ -315,6 +321,11 @@ export default function MenuBrowser({ categories, whatsappNumber, deliveryPricin
                       <span className="text-sm font-medium" style={{ color: 'var(--dsp-muted)' }}>Items subtotal</span>
                       <span className="dsp-display text-xl font-bold tabular-nums" style={{ color: 'var(--dsp-ink)' }}>{formatMenuPrice(cartTotal)}</span>
                     </div>
+                    <p className="mb-3 text-xs font-medium" style={{ color: cartTotal < MINIMUM_ONLINE_ORDER ? 'var(--dsp-danger)' : 'var(--dsp-success)' }}>
+                      {cartTotal < MINIMUM_ONLINE_ORDER
+                        ? `Minimum online order is ${formatMenuPrice(MINIMUM_ONLINE_ORDER)} · add ${formatMenuPrice(MINIMUM_ONLINE_ORDER - cartTotal)} more`
+                        : 'Minimum online order reached'}
+                    </p>
 
                     {/* Order details */}
                     <div className="space-y-2.5">

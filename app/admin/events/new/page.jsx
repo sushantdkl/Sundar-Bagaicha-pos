@@ -8,7 +8,7 @@ import { AlertTriangle, ArrowLeft, CheckCircle2, Info } from 'lucide-react';
 import { apiJson } from '@/lib/authed-fetch';
 import { nepalDateString } from '@/lib/report-dates';
 import { useToast } from '@/components/ui/toast';
-import { errText } from '../event-ui';
+import { errText, useEventsBasePath } from '../event-ui';
 
 /**
  * Event types are venue vocabulary, not code. These are starting suggestions
@@ -23,6 +23,7 @@ const TYPE_SUGGESTIONS = [
 
 export default function NewEventPage() {
   const router = useRouter();
+  const eventsBase = useEventsBasePath();
   const { addToast } = useToast();
   const [spaces, setSpaces] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -77,7 +78,7 @@ export default function NewEventPage() {
         title: `Event ${res.event.event_number} created`,
         description: res.warnings?.length ? res.warnings[0].message : 'No stock was reserved or deducted.',
       });
-      router.push(`/admin/events/${res.event.id}`);
+      router.push(`${eventsBase}/${res.event.id}`);
     } catch (err) {
       // A blocked save is offered as an explicit, reasoned override rather than
       // a dead end — the server still refuses without a reason.
@@ -107,14 +108,15 @@ export default function NewEventPage() {
       <div className="evx">
         <header className="headpad" style={{ borderBottom: '1px solid var(--color-divider)', background: 'var(--color-bg)' }}>
           <Link
-            href="/admin/events"
+            href={eventsBase}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: 'var(--color-neutral-600)', textDecoration: 'none' }}
           >
             <ArrowLeft size={15} />Events
           </Link>
           <h1 style={{ fontSize: 28, margin: '10px 0 6px' }}>New Event</h1>
           <p style={{ margin: 0, fontSize: 13, color: 'var(--color-neutral-700)' }}>
-            Creating a booking records an enquiry only. It does not reserve or deduct any inventory.
+            Choose Inquiry for a tentative enquiry or Confirmed to reserve a firm booking. A new confirmed booking
+            remains open for menu and package planning until its customer quotation is issued. Neither option deducts inventory.
           </p>
         </header>
 
@@ -135,10 +137,10 @@ export default function NewEventPage() {
                 <input value={form.title} onChange={(e) => set('title', e.target.value)}
                   placeholder="e.g. Sharma – Thapa Wedding" className="input" />
               </Field>
-              <Field label="Starting status">
+              <Field label="Booking status">
                 <select value={form.status} onChange={(e) => set('status', e.target.value)} className="input">
                   <option value="INQUIRY">Inquiry</option>
-                  <option value="DRAFT">Draft</option>
+                  <option value="CONFIRMED">Confirmed</option>
                 </select>
               </Field>
             </Section>
@@ -228,9 +230,9 @@ export default function NewEventPage() {
             </Section>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingBottom: 8 }}>
-              <Link href="/admin/events" className="btn btn-secondary">Cancel</Link>
+              <Link href={eventsBase} className="btn btn-secondary">Cancel</Link>
               <button type="submit" disabled={busy} className="btn btn-primary">
-                {busy ? 'Creating…' : 'Create Event'}
+                {busy ? 'Creating…' : form.status === 'CONFIRMED' ? 'Create & Plan Menu' : 'Create Inquiry'}
               </button>
             </div>
           </form>

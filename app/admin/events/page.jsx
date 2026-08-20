@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/admin-layout';
 import { CalendarRange, Plus, RefreshCw, Search, TrendingUp, Users } from 'lucide-react';
 import { apiJson } from '@/lib/authed-fetch';
@@ -9,7 +10,7 @@ import { nepalDateString } from '@/lib/report-dates';
 import { useToast } from '@/components/ui/toast';
 import {
   EVENT_STATUSES, money, moneyShort, dateLabel, timeRange, guestLabel,
-  errText, pillClass, statusText,
+  errText, pillClass, statusText, useEventsBasePath,
 } from './event-ui';
 
 /**
@@ -20,6 +21,8 @@ import {
  * grouping figures that are read together.
  */
 export default function EventsPage() {
+  const router = useRouter();
+  const eventsBase = useEventsBasePath();
   const { addToast } = useToast();
   const [dash, setDash] = useState(null);
   const [list, setList] = useState(null);
@@ -82,9 +85,9 @@ export default function EventsPage() {
             <button type="button" onClick={load} disabled={busy} className="btn btn-secondary">
               <RefreshCw size={15} className={busy ? 'animate-spin' : undefined} />Refresh
             </button>
-            <Link href="/admin/events/calendar" className="btn btn-secondary"><CalendarRange size={15} />Calendar</Link>
-            <Link href="/admin/events/reports" className="btn btn-secondary"><TrendingUp size={15} />Reports</Link>
-            <Link href="/admin/events/new" className="btn btn-primary"><Plus size={15} />New Event</Link>
+            <Link href={`${eventsBase}/calendar`} className="btn btn-secondary"><CalendarRange size={15} />Calendar</Link>
+            <Link href={`${eventsBase}/reports`} className="btn btn-secondary"><TrendingUp size={15} />Reports</Link>
+            <Link href={`${eventsBase}/new`} className="btn btn-primary"><Plus size={15} />New Event</Link>
           </div>
         </header>
 
@@ -147,11 +150,20 @@ export default function EventsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.id}>
+                  {rows.map((r) => {
+                    const detailHref = `${eventsBase}/${r.id}`;
+                    return (
+                    <tr
+                      key={r.id}
+                      className="event-list-row"
+                      onClick={(event) => {
+                        const interactive = event.target.closest('a, button, input, select, textarea, [role="button"]');
+                        if (!interactive) router.push(detailHref);
+                      }}
+                    >
                       <td style={{ padding: '12px 8px' }}>
                         <Link
-                          href={`/admin/events/${r.id}`}
+                          href={detailHref}
                           className="rowlink"
                         >
                           {r.event_number}
@@ -180,7 +192,8 @@ export default function EventsPage() {
                       </td>
                       <td className="num" style={{ padding: '12px 8px', fontWeight: 700 }}>{money(r.total_amount)}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
 
@@ -190,7 +203,7 @@ export default function EventsPage() {
                   <p style={{ margin: '12px 0 0', fontSize: 13, color: 'var(--color-neutral-600)' }}>
                     No events match these filters.
                   </p>
-                  <Link href="/admin/events/new" className="btn btn-secondary" style={{ marginTop: 16 }}>
+                  <Link href={`${eventsBase}/new`} className="btn btn-secondary" style={{ marginTop: 16 }}>
                     Create the first event
                   </Link>
                 </div>

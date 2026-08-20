@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AdminLayout from '@/components/admin/admin-layout';
 import { ArrowLeft, ChefHat, Clock, Package, Pencil } from 'lucide-react';
@@ -20,6 +20,10 @@ import RecipePanel from '@/components/inventory/recipe-panel';
 export default function RecipeProfilePage() {
   const { id } = useParams();
   const router = useRouter();
+  const pathname = usePathname();
+  const isCashier = pathname?.startsWith('/cashier');
+  const recipesBase = isCashier ? '/cashier/recipes' : '/admin/recipes';
+  const inventoryBase = isCashier ? '/cashier/inventory' : '/admin/inventory';
   const { addToast } = useToast();
   const [recipe, setRecipe] = useState(null);
   const [allRecipes, setAllRecipes] = useState([]);
@@ -98,7 +102,7 @@ export default function RecipeProfilePage() {
       <header className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <button onClick={() => router.push('/admin/recipes')} className="shrink-0 rounded-lg border border-gray-300 p-2 text-gray-700 hover:bg-gray-50" aria-label="Back to recipes">
+            <button onClick={() => router.push(recipesBase)} className="shrink-0 rounded-lg border border-gray-300 p-2 text-gray-700 hover:bg-gray-50" aria-label="Back to recipes">
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="min-w-0">
@@ -150,7 +154,7 @@ export default function RecipeProfilePage() {
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Used in</h3>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {usedIn.slice(0, 8).map((r) => (
-                    <Link key={r.id} href={`/admin/recipes/${r.id}`} className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200">
+                    <Link key={r.id} href={`${recipesBase}/${r.id}`} className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200">
                       {r.menu_item_name || r.name}
                     </Link>
                   ))}
@@ -177,7 +181,7 @@ export default function RecipeProfilePage() {
                     {recipe.cost.breakdown.map((b) => (
                       <tr key={b.inventory_item_id} className="text-gray-600">
                         <td className="px-3 py-2.5 font-medium text-gray-900">
-                          <Link href={`/admin/inventory/${b.inventory_item_id}`} className="hover:underline">{b.item_name}</Link>
+                          <Link href={`${inventoryBase}/${b.inventory_item_id}`} className="hover:underline">{b.item_name}</Link>
                         </td>
                         <td className="px-3 py-2.5 text-right tabular-nums">{b.quantity.toFixed(2)} {b.unit}</td>
                         <td className="px-3 py-2.5 text-right tabular-nums">Rs {b.cost_per_unit.toFixed(3)}</td>

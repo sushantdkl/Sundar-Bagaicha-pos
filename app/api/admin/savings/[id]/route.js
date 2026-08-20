@@ -5,7 +5,7 @@ import { voidSavingsDeposit } from '@/lib/savings.js';
 
 export async function DELETE(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'savings.manage' });
     if (auth.error) return auth.error;
     const { id } = await params;
     const row = await voidSavingsDeposit(Database.getInstance(), Number(id), (await request.json()).reason, auth.user?.id);

@@ -1,7 +1,7 @@
 import MenuBrowser from '@/components/public/menu-browser';
 import { getPublicDeliveryPricing, getPublicMenuCategories } from '@/lib/public-menu';
 import { RESTAURANT } from '@/lib/restaurant-info';
-import { getPublicContact } from '@/lib/public-content';
+import { getPublicContact, getPublicHome } from '@/lib/public-content';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,9 +16,10 @@ export default async function MenuPage() {
   let categories = [];
   let contact = { whatsappNumber: RESTAURANT.whatsappNumber };
   let deliveryPricing = { enabled: false, mode: 'fixed', fixedFee: 0, bands: [] };
+  let home = { menuTitle: 'Our Menu', menuLead: '' };
   try {
-    [categories, contact, deliveryPricing] = await Promise.all([
-      getPublicMenuCategories(), getPublicContact(), getPublicDeliveryPricing(),
+    [categories, contact, deliveryPricing, home] = await Promise.all([
+      getPublicMenuCategories(), getPublicContact(), getPublicDeliveryPricing(), getPublicHome(),
     ]);
   } catch {
     categories = [];
@@ -29,10 +30,10 @@ export default async function MenuPage() {
   return (
     <>
       <section className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 pt-10 pb-2">
-        <h1 className="dsp-display text-3xl font-bold sm:text-4xl" style={{ color: 'var(--dsp-ink)' }}>Our Menu</h1>
+        <h1 className="dsp-display text-3xl font-bold sm:text-4xl" style={{ color: 'var(--dsp-ink)' }}>{home.menuTitle || 'Our Menu'}</h1>
         <p className="mt-2 max-w-2xl text-sm" style={{ color: 'var(--dsp-muted)' }}>
           {itemCount > 0
-            ? `${itemCount} dishes across ${categories.length} categories — biryani, momo, sekuwa, coffee, snacks and fast food, served fresh at our counter in Surkhet.`
+            ? (home.menuLead || `${itemCount} dishes across ${categories.length} categories — biryani, momo, sekuwa, coffee, snacks and fast food, served fresh at our counter in Surkhet.`)
             : 'Our menu is being updated. Please check back shortly, or contact us for today’s dishes.'}
         </p>
       </section>

@@ -134,6 +134,14 @@ export default function AccountsReceivablePage() {
     setForm({ amount: String(defaultAmount), method: 'cash', bank_account_id: String(overview.banks?.[0]?.id || ''), qrProvider: 'Fonepay', note: '' });
   };
 
+  const setActionMode = (mode) => {
+    const defaultAmount = actionFor.scope === 'bill'
+      ? Number(actionFor.target.outstanding_amount || 0)
+      : outstandingTotal;
+    setActionFor((current) => ({ ...current, mode }));
+    setForm((current) => ({ ...current, amount: String(defaultAmount), note: '' }));
+  };
+
   const submitAction = async () => {
     if (!(Number(form.amount) > 0)) { addToast(friendlyMessage('validation', { description: 'Enter an amount.' })); return; }
     setBusy(true);
@@ -309,9 +317,6 @@ export default function AccountsReceivablePage() {
                 <button type="button" disabled={outstandingTotal <= 0} onClick={() => openAction('customer', 'pay')} className="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-800 disabled:opacity-40">
                   Receive payment
                 </button>
-                <button type="button" disabled={outstandingTotal <= 0} onClick={() => openAction('customer', 'writeoff')} className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-40">
-                  <Tag className="h-4 w-4" /> Give discount
-                </button>
               </div>
 
               <div>
@@ -398,14 +403,6 @@ export default function AccountsReceivablePage() {
                 >
                   Pay this bill
                 </button>
-                <button
-                  type="button"
-                  disabled={Number(selectedBill.outstanding_amount || 0) <= 0}
-                  onClick={() => openAction('bill', 'writeoff', selectedBill)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-40"
-                >
-                  <Tag className="h-4 w-4" /> Discount this bill
-                </button>
                 {selectedBill.order_id && (
                   <button
                     type="button"
@@ -426,13 +423,34 @@ export default function AccountsReceivablePage() {
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 max-h-[94dvh] overflow-y-auto">
             <h3 className="mb-1 text-lg font-bold text-gray-900">
-              {actionFor.mode === 'writeoff' ? 'Give discount' : 'Receive payment'}
+              Settle balance
               {actionFor.scope === 'bill' ? ` — ${actionFor.target.bill_number}` : ` — ${selected?.name}`}
             </h3>
             <p className="mb-4 text-sm text-gray-500">
               Outstanding {money(actionFor.scope === 'bill' ? actionFor.target.outstanding_amount : outstandingTotal)}
             </p>
             <div className="space-y-3">
+              <fieldset>
+                <legend className="mb-1 block text-sm font-medium text-gray-700">Action</legend>
+                <div className="grid grid-cols-2 rounded-xl bg-gray-100 p-1" role="group" aria-label="Settlement action">
+                  <button
+                    type="button"
+                    aria-pressed={actionFor.mode === 'pay'}
+                    onClick={() => setActionMode('pay')}
+                    className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${actionFor.mode === 'pay' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                  >
+                    <Wallet className="h-4 w-4" /> Payment
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={actionFor.mode === 'writeoff'}
+                    onClick={() => setActionMode('writeoff')}
+                    className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${actionFor.mode === 'writeoff' ? 'bg-white text-amber-800 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                  >
+                    <Tag className="h-4 w-4" /> Discount
+                  </button>
+                </div>
+              </fieldset>
               <Field label={actionFor.mode === 'writeoff' ? 'Discount amount' : 'Amount'}>
                 <input type="number" min="0" step="any" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} className={INPUT} />
               </Field>

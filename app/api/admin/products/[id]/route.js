@@ -21,7 +21,7 @@ async function syncInventoryLink(db, menuItemId, inventoryItemId) {
 
 export async function PUT(request, context) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'menu.products.manage' });
     if (auth.error) return auth.error;
 
     const { id } = await context.params;
@@ -79,7 +79,7 @@ export async function PUT(request, context) {
 
 export async function DELETE(request, context) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'menu.products.manage' });
     if (auth.error) return auth.error;
 
     const { id } = await context.params;

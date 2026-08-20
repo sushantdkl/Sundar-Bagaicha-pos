@@ -10,7 +10,7 @@ import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/confirm';
 import { EVENT_STATUS_TRANSITIONS, canBill } from '@/lib/events/constants.js';
 import {
-  money, dateLabel, timeRange, guestLabel, errText, pillClass, statusText, LIFECYCLE,
+  money, dateLabel, timeRange, guestLabel, errText, pillClass, statusText, LIFECYCLE, useEventsBasePath,
 } from '../event-ui';
 import Quotation from './quotation';
 import Payments from './payments';
@@ -18,6 +18,7 @@ import SettlementDialog from './settlement';
 
 export default function EventDetailPage() {
   const { id } = useParams();
+  const eventsBase = useEventsBasePath();
   const { addToast } = useToast();
   const { confirm, prompt } = useConfirm();
   const [data, setData] = useState(null);
@@ -107,7 +108,7 @@ export default function EventDetailPage() {
       <div className="evx">
         <header className="headpad" style={{ borderBottom: '1px solid var(--color-divider)', background: 'var(--color-bg)' }}>
           <Link
-            href="/admin/events"
+            href={eventsBase}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: 'var(--color-neutral-600)', textDecoration: 'none' }}
           >
             <ArrowLeft size={15} />Events
@@ -259,6 +260,7 @@ export default function EventDetailPage() {
         {settling && (
           <SettlementDialog
             event={event}
+            lines={lines}
             addToast={addToast}
             onClose={() => setSettling(false)}
             onSettled={async () => { setSettling(false); await load(); }}

@@ -19,6 +19,7 @@ const TABS = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'about', label: 'About', icon: Info },
   { id: 'gallery', label: 'Gallery', icon: ImageIcon },
+  { id: 'landing', label: 'Site Sections', icon: Globe },
   { id: 'contact', label: 'Contact', icon: Phone },
   { id: 'seo', label: 'SEO', icon: SeoIcon },
   { id: 'media', label: 'Media Library', icon: ImageIcon },
@@ -111,6 +112,7 @@ export default function CmsPage() {
             {tab === 'home' && <HomeForm data={content.home} onSave={(d) => saveSection('home', d)} />}
             {tab === 'about' && <AboutForm data={content.about} onSave={(d) => saveSection('about', d)} />}
             {tab === 'gallery' && <GalleryForm data={content.gallery} onSave={(d) => saveSection('gallery', d)} />}
+            {tab === 'landing' && <LandingForm data={content.landing} onSave={(d) => saveSection('landing', d)} />}
             {tab === 'contact' && <ContactForm data={content.contact} onSave={(d) => saveSection('contact', d)} />}
             {tab === 'seo' && <SeoForm data={content.seo} onSave={(d) => saveSection('seo', d)} />}
             {tab === 'media' && <MediaLibrary />}
@@ -505,6 +507,167 @@ function AboutForm({ data, onSave }) {
             <Plus className="h-3.5 w-3.5" /> Add feature
           </button>
         </div>
+      </Card>
+      <SaveBar dirty={dirty} onSave={() => onSave(d)} />
+    </div>
+  );
+}
+
+function LinesEditor({ value, onChange, placeholder }) {
+  return (
+    <TextArea
+      rows={5}
+      value={(value || []).join('\n')}
+      onChange={(next) => onChange(next.split('\n').map((item) => item.trim()).filter(Boolean))}
+      placeholder={placeholder}
+    />
+  );
+}
+
+function Repeater({ items = [], onChange, fields, addLabel, blank }) {
+  const update = (index, key, value) => onChange(items.map((item, i) => (i === index ? { ...item, [key]: value } : item)));
+  return (
+    <div className="sm:col-span-2 space-y-3">
+      {items.map((item, index) => (
+        <div key={index} className="grid gap-2 rounded-xl border border-gray-200 p-3 sm:grid-cols-2">
+          {fields.map((field) => (
+            <div key={field.key} className={field.wide ? 'sm:col-span-2' : ''}>
+              <Field label={field.label}>
+                {field.area ? (
+                  <TextArea rows={3} value={item[field.key]} onChange={(value) => update(index, field.key, value)} />
+                ) : (
+                  <Text type={field.type} value={item[field.key]} onChange={(value) => update(index, field.key, field.type === 'number' ? Number(value) : value)} />
+                )}
+              </Field>
+            </div>
+          ))}
+          <button type="button" onClick={() => onChange(items.filter((_, i) => i !== index))} className="text-left text-xs text-red-600 sm:col-span-2">
+            Remove
+          </button>
+        </div>
+      ))}
+      <button type="button" onClick={() => onChange([...items, { ...blank }])} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium hover:bg-gray-50">
+        <Plus className="h-3.5 w-3.5" /> {addLabel}
+      </button>
+    </div>
+  );
+}
+
+function HeadingFields({ data, set, prefix, title = 'Section heading' }) {
+  return (
+    <Card title={title}>
+      <Field label="Small label"><Text value={data[`${prefix}Label`]} onChange={(value) => set({ [`${prefix}Label`]: value })} /></Field>
+      <Field label="Heading before highlight"><Text value={data[`${prefix}TitleBefore`]} onChange={(value) => set({ [`${prefix}TitleBefore`]: value })} /></Field>
+      <Field label="Highlighted words"><Text value={data[`${prefix}TitleAccent`]} onChange={(value) => set({ [`${prefix}TitleAccent`]: value })} /></Field>
+      <Field label="Heading after highlight"><Text value={data[`${prefix}TitleAfter`]} onChange={(value) => set({ [`${prefix}TitleAfter`]: value })} /></Field>
+    </Card>
+  );
+}
+
+function LandingForm({ data, onSave }) {
+  const [d, set, dirty] = useDraft(data);
+  const sections = d.sections || {};
+  return (
+    <div className="space-y-4">
+      <p className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+        These controls edit the original public landing page without changing its design. Brand images are managed under Brand; gallery photos are managed under Gallery; dish names, prices, and photos remain linked to the POS menu.
+      </p>
+
+      <Card title="Navigation">
+        <Repeater items={d.navigation} onChange={(navigation) => set({ navigation })}
+          fields={[{ key: 'label', label: 'Label' }, { key: 'href', label: 'Link' }]}
+          addLabel="Add navigation link" blank={{ label: 'New link', href: '#' }} />
+        <Field label="Staff button label"><Text value={d.staffLabel} onChange={(staffLabel) => set({ staffLabel })} /></Field>
+        <Field label="Staff button link"><Text value={d.staffHref} onChange={(staffHref) => set({ staffHref })} /></Field>
+      </Card>
+
+      <Card title="Hero statistics and scrolling feature strip">
+        <Repeater items={d.heroStats} onChange={(heroStats) => set({ heroStats })}
+          fields={[{ key: 'value', label: 'Value' }, { key: 'label', label: 'Label' }]}
+          addLabel="Add statistic" blank={{ value: '0', label: 'New statistic' }} />
+        <div className="sm:col-span-2"><Field label="Feature strip items" hint="One item per line"><LinesEditor value={d.featureStrip} onChange={(featureStrip) => set({ featureStrip })} /></Field></div>
+      </Card>
+
+      <HeadingFields data={d} set={set} prefix="about" title="About section heading" />
+      <Card title="About details">
+        <Field label="Rating"><Text value={d.aboutRating} onChange={(aboutRating) => set({ aboutRating })} /></Field>
+        <Field label="Rating label"><Text value={d.aboutRatingLabel} onChange={(aboutRatingLabel) => set({ aboutRatingLabel })} /></Field>
+        <Field label="Button label"><Text value={d.aboutCtaLabel} onChange={(aboutCtaLabel) => set({ aboutCtaLabel })} /></Field>
+      </Card>
+      <HeadingFields data={d} set={set} prefix="gallery" title="Gallery section heading" />
+      <HeadingFields data={d} set={set} prefix="menu" title="Menu preview heading" />
+
+      <HeadingFields data={d} set={set} prefix="events" title="Events section heading" />
+      <Card title="Events section content">
+        <div className="sm:col-span-2"><Field label="Introduction"><Text value={d.eventsLead} onChange={(eventsLead) => set({ eventsLead })} /></Field></div>
+        <Repeater items={d.events} onChange={(events) => set({ events })}
+          fields={[{ key: 'icon', label: 'Icon / emoji' }, { key: 'title', label: 'Title' }, { key: 'text', label: 'Description', area: true, wide: true }]}
+          addLabel="Add event type" blank={{ icon: '🎉', title: 'New event', text: '' }} />
+      </Card>
+
+      <HeadingFields data={d} set={set} prefix="amenities" title="Amenities section heading" />
+      <Card title="Amenities">
+        <Repeater items={d.amenities} onChange={(amenities) => set({ amenities })}
+          fields={[{ key: 'icon', label: 'Icon / emoji' }, { key: 'title', label: 'Title' }, { key: 'text', label: 'Description', area: true, wide: true }]}
+          addLabel="Add amenity" blank={{ icon: '✓', title: 'New amenity', text: '' }} />
+      </Card>
+
+      <HeadingFields data={d} set={set} prefix="reviews" title="Reviews section heading" />
+      <Card title="Review summary and cards">
+        <Field label="Overall rating"><Text value={d.reviewsRating} onChange={(reviewsRating) => set({ reviewsRating })} /></Field>
+        <Field label="Rating caption"><Text value={d.reviewsCount} onChange={(reviewsCount) => set({ reviewsCount })} /></Field>
+        <Repeater items={d.reviews} onChange={(reviews) => set({ reviews })}
+          fields={[{ key: 'name', label: 'Guest name' }, { key: 'source', label: 'Source' }, { key: 'rating', label: 'Stars (1-5)', type: 'number' }, { key: 'text', label: 'Review', area: true, wide: true }]}
+          addLabel="Add review" blank={{ name: 'Guest', source: 'Google Review', rating: 5, text: '' }} />
+      </Card>
+
+      <HeadingFields data={d} set={set} prefix="reservation" title="Reservation section heading" />
+      <Card title="Reservation panel">
+        <div className="sm:col-span-2"><Field label="Description"><TextArea value={d.reservationDescription} onChange={(reservationDescription) => set({ reservationDescription })} /></Field></div>
+        <div className="sm:col-span-2"><Field label="Opening hours" hint="Use a new line for a line break"><TextArea value={d.reservationHours} onChange={(reservationHours) => set({ reservationHours })} /></Field></div>
+        <Field label="Form title"><Text value={d.reservationFormTitle} onChange={(reservationFormTitle) => set({ reservationFormTitle })} /></Field>
+        <Field label="Submit button"><Text value={d.reservationButton} onChange={(reservationButton) => set({ reservationButton })} /></Field>
+        <div className="sm:col-span-2"><Field label="Confirmation note"><Text value={d.reservationNote} onChange={(reservationNote) => set({ reservationNote })} /></Field></div>
+        <Field label="Success title"><Text value={d.reservationSuccessTitle} onChange={(reservationSuccessTitle) => set({ reservationSuccessTitle })} /></Field>
+        <div className="sm:col-span-2"><Field label="Success message"><TextArea value={d.reservationSuccessMessage} onChange={(reservationSuccessMessage) => set({ reservationSuccessMessage })} /></Field></div>
+        <Field label="Guest choices" hint="One choice per line"><LinesEditor value={d.guestOptions} onChange={(guestOptions) => set({ guestOptions })} /></Field>
+        <Field label="Occasion choices" hint="One choice per line"><LinesEditor value={d.occasionOptions} onChange={(occasionOptions) => set({ occasionOptions })} /></Field>
+      </Card>
+
+      <HeadingFields data={d} set={set} prefix="location" title="Location section heading" />
+      <Card title="Location details">
+        <Field label="Opening hours"><TextArea value={d.locationHours} onChange={(locationHours) => set({ locationHours })} /></Field>
+        <Field label="Established text"><Text value={d.locationEstablished} onChange={(locationEstablished) => set({ locationEstablished })} /></Field>
+      </Card>
+
+      <HeadingFields data={d} set={set} prefix="inquiry" title="Inquiry section heading" />
+      <Card title="Inquiry form">
+        <div className="sm:col-span-2"><Field label="Introduction"><Text value={d.inquiryLead} onChange={(inquiryLead) => set({ inquiryLead })} /></Field></div>
+        <Field label="Submit button"><Text value={d.inquiryButton} onChange={(inquiryButton) => set({ inquiryButton })} /></Field>
+        <Field label="Form note"><Text value={d.inquiryNote} onChange={(inquiryNote) => set({ inquiryNote })} /></Field>
+        <Field label="Success title"><Text value={d.inquirySuccessTitle} onChange={(inquirySuccessTitle) => set({ inquirySuccessTitle })} /></Field>
+        <div className="sm:col-span-2"><Field label="Success message"><TextArea value={d.inquirySuccessMessage} onChange={(inquirySuccessMessage) => set({ inquirySuccessMessage })} /></Field></div>
+        <div className="sm:col-span-2"><Field label="Subject choices" hint="One choice per line"><LinesEditor value={d.inquirySubjects} onChange={(inquirySubjects) => set({ inquirySubjects })} /></Field></div>
+      </Card>
+
+      <Card title="Footer">
+        <div className="sm:col-span-2"><Field label="Brand description"><TextArea value={d.footerTagline} onChange={(footerTagline) => set({ footerTagline })} /></Field></div>
+        <Field label="Services" hint="One service per line"><LinesEditor value={d.footerServices} onChange={(footerServices) => set({ footerServices })} /></Field>
+        <Field label="Copyright"><TextArea value={d.footerCopyright} onChange={(footerCopyright) => set({ footerCopyright })} /></Field>
+        <div className="sm:col-span-2"><Field label="Footer motto"><Text value={d.footerMotto} onChange={(footerMotto) => set({ footerMotto })} /></Field></div>
+      </Card>
+
+      <Card title="Section visibility">
+        {['events', 'amenities', 'reviews', 'reservation', 'location', 'inquiry'].map((name) => (
+          <label key={name} className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+            <span className="text-sm capitalize text-gray-700">{name}</span>
+            <button type="button" onClick={() => set({ sections: { ...sections, [name]: sections[name] === false } })}
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${sections[name] !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+              {sections[name] !== false ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+              {sections[name] !== false ? 'Visible' : 'Hidden'}
+            </button>
+          </label>
+        ))}
       </Card>
       <SaveBar dirty={dirty} onSave={() => onSave(d)} />
     </div>

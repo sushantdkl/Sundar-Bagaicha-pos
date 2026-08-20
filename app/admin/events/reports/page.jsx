@@ -20,7 +20,7 @@ import AdminLayout from '@/components/admin/admin-layout';
 import { ArrowLeft, RefreshCw, TrendingUp, Wallet, PieChart } from 'lucide-react';
 import { apiJson } from '@/lib/authed-fetch';
 import { useToast } from '@/components/ui/toast';
-import { money, dateLabel, errText } from '../event-ui';
+import { money, dateLabel, errText, useEventsBasePath } from '../event-ui';
 
 const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kathmandu' });
 const monthStart = () => `${today().slice(0, 7)}-01`;
@@ -51,6 +51,7 @@ function Section({ icon: Icon, title, note, children }) {
 }
 
 export default function EventReportsPage() {
+  const eventsBase = useEventsBasePath();
   const { addToast } = useToast();
   const [from, setFrom] = useState(monthStart);
   const [to, setTo] = useState(today);
@@ -80,7 +81,7 @@ export default function EventReportsPage() {
       <div className="space-y-4 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Link href="/admin/events" className="rounded-lg border border-gray-200 p-2 hover:bg-gray-50">
+            <Link href={eventsBase} className="rounded-lg border border-gray-200 p-2 hover:bg-gray-50">
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div>
@@ -210,7 +211,7 @@ export default function EventReportsPage() {
                   {pf.events.map((e) => (
                     <tr key={e.event_id} className="border-t border-gray-100">
                       <td className="py-1.5">
-                        <Link href={`/admin/events/${e.event_id}`} className="font-medium text-gray-900 hover:underline">
+                        <Link href={`${eventsBase}/${e.event_id}`} className="font-medium text-gray-900 hover:underline">
                           {e.event_number}
                         </Link>
                         <div className="text-xs text-gray-500">{e.title}</div>

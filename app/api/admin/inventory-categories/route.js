@@ -12,7 +12,7 @@ import {
 export async function GET(request) {
   try {
     // Kitchen reads inventory too, so it may need the category list for pickers.
-    const auth = await requireAuth(request, { roles: ['admin', 'kitchen'] });
+    const auth = await requireAuth(request, { roles: ['admin', 'kitchen', 'cashier'] });
     if (auth.error) return auth.error;
 
     const db = Database.getInstance();
@@ -25,7 +25,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'inventory.categories.manage' });
     if (auth.error) return auth.error;
 
     const data = await request.json();
@@ -40,7 +40,7 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'inventory.categories.manage' });
     if (auth.error) return auth.error;
 
     const data = await request.json();
@@ -57,7 +57,7 @@ export async function PUT(request) {
 
 export async function DELETE(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'inventory.categories.manage' });
     if (auth.error) return auth.error;
 
     const id = new URL(request.url).searchParams.get('id');

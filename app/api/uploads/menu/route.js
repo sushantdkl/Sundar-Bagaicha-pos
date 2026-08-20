@@ -11,7 +11,7 @@ export const runtime = 'nodejs';
  */
 export async function POST(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'menu.products.manage' });
     if (auth.error) return auth.error;
 
     const form = await request.formData();

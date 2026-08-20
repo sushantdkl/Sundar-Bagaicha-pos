@@ -52,7 +52,7 @@ export async function GET(request) {
 // POST - Create new category
 export async function POST(request) {
   try {
-    const auth = await requireAuth(request);
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'menu.categories.manage' });
     if (auth.error) return auth.error;
 
     const { name, icon, display_order, food_group } = await request.json();
@@ -112,7 +112,7 @@ export async function POST(request) {
 // PUT - Update category
 export async function PUT(request) {
   try {
-    const auth = await requireAuth(request);
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'menu.categories.manage' });
     if (auth.error) return auth.error;
 
     const { id, name, icon, display_order, food_group } = await request.json();
@@ -181,7 +181,7 @@ export async function PUT(request) {
 // DELETE - Delete category
 export async function DELETE(request) {
   try {
-    const auth = await requireAuth(request);
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'menu.categories.manage' });
     if (auth.error) return auth.error;
 
     const { searchParams } = new URL(request.url);

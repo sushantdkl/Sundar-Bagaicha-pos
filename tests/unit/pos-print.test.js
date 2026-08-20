@@ -122,6 +122,34 @@ test('proforma (pre-bill) is visibly different from the paid bill', () => {
   assert.match(html, /settle the bill at the counter/);
 });
 
+test('event pre-bill names the event and customer instead of calling it takeaway', () => {
+  const html = withStubbedPrintWindow(() => printProforma({
+    workspace: {
+      order: { order_type: 'event', event_number: 'EVT-0042', customer_name: 'Sita Sharma' },
+      items: [{ item_name: 'Wedding package', quantity: 100, price: 1200, subtotal: 120000 }],
+    },
+    totals: { subtotal: 120000, discount: 0, tax: 0, serviceCharge: 0, total: 120000 },
+  }, { size: '80' }));
+  assert.match(html, />Event</);
+  assert.match(html, /EVT-0042/);
+  assert.match(html, /Sita Sharma/);
+  assert.doesNotMatch(html, /Takeaway/);
+});
+
+test('settled event bill keeps the event reference on the final customer bill', () => {
+  const html = withStubbedPrintWindow(() => printFinalBill({
+    ...baseReceipt,
+    order_type: 'event',
+    order_number: 'EVT-0042',
+    table_number: null,
+    customer_name: 'Sita Sharma',
+  }, { size: '80' }));
+  assert.match(html, /CUSTOMER BILL/);
+  assert.match(html, />Event</);
+  assert.match(html, /EVT-0042/);
+  assert.doesNotMatch(html, /Takeaway/);
+});
+
 test('takeaway order shows Type: Takeaway instead of a table number', () => {
   const receipt = { ...baseReceipt, table_number: null };
   const html = withStubbedPrintWindow(() => printFinalBill(receipt, { size: '80' }));

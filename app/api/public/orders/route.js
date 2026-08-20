@@ -7,6 +7,8 @@ import { currentBusinessDayId } from '@/lib/business-days.js';
 import { calculateDeliveryPricing, loadDeliveryPricing } from '@/lib/delivery-pricing.js';
 import { ensureMenuVariantsSchema } from '@/lib/menu-variants.js';
 
+const MINIMUM_ONLINE_ORDER = 500;
+
 async function savedOrderResponse(db, order) {
   const items = await db.all(
     `SELECT item_name, quantity, price, subtotal
@@ -103,6 +105,18 @@ export async function POST(request) {
       resolved.push({ menu_item_id: id, item_name: itemName, variant_name: variantName, quantity, price, subtotal: price * quantity });
     }
     if (!resolved.length) return NextResponse.json({ error: 'None of the selected items are available.' }, { status: 400 });
+    const itemsSubtotal = resolved.reduce((sum, item) => sum + item.subtotal, 0);
+    if (itemsSubtotal < MINIMUM_ONLINE_ORDER) {
+      return NextResponse.json(
+        {
+          error: `Minimum online order is Rs ${MINIMUM_ONLINE_ORDER}. Add Rs ${(MINIMUM_ONLINE_ORDER - itemsSubtotal).toFixed(2)} more.`,
+          code: 'minimum_order',
+          minimum_order: MINIMUM_ONLINE_ORDER,
+          current_subtotal: itemsSubtotal,
+        },
+        { status: 400 }
+      );
+    }
 
     const notes = orderType === 'delivery'
       ? `Online order (website) — Deliver to: ${deliveryAddress}${nearbyLandmark ? ` — Landmark: ${nearbyLandmark}` : ''}${customerNote ? ` — Note: ${customerNote}` : ''}`
@@ -111,7 +125,10 @@ export async function POST(request) {
     let result;
     try {
       result = await db.transaction(async () => {
-        const businessDayId = await currentBusinessDayId(db, { required: true });
+        // Website orders can arrive while staff are carrying an overnight
+        // business day. Keep the order attached to that open day without
+        // exposing the staff-only rollover workflow to the customer.
+        const businessDayId = await currentBusinessDayId(db, { required: true, allowStale: true });
         const orderNumber = await nextDocumentNumber(db, { type: 'web_order', prefix: 'WEB' });
         const orderRes = await db.run(
           `INSERT INTO orders (order_number, table_id, table_number, order_type, status, payment_status, waiter_id,
@@ -150,8 +167,14 @@ export async function POST(request) {
   } catch (error) {
     console.error('public order error', error);
     const status = error?.status || 500;
+    const unavailableCodes = new Set(['business_day_required', 'store_session_required', 'business_day_stale']);
+    const publicMessage = unavailableCodes.has(error?.code)
+      ? 'Online ordering is temporarily unavailable. Please call us or send your order via WhatsApp.'
+      : status >= 500
+        ? 'Could not place the order. Please try again or call us.'
+        : error.message;
     return NextResponse.json(
-      { error: status >= 500 ? 'Could not place the order. Please try again or call us.' : error.message, field: error?.field },
+      { error: publicMessage, field: error?.field },
       { status }
     );
   }

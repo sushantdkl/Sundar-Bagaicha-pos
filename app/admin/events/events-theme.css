@@ -204,6 +204,9 @@
 .evx .table td { padding: 8px; border-bottom: 1px solid var(--color-neutral-100); }
 .evx .table tbody tr:last-child td { border-bottom: 0; }
 .evx .table tbody tr:hover { background: var(--color-surface); }
+.evx .table tbody .event-list-row { cursor: pointer; }
+.evx .table tbody .event-list-row:hover .rowlink { text-decoration: underline; }
+.evx .table tbody .event-list-row:active { background: var(--color-neutral-100); }
 .evx .num { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* — status pills —

@@ -23,6 +23,7 @@ import { buildSummaryReport } from '../../lib/summary-report.js';
 import { ensureStockMovementsTable } from '../../lib/stock-movements.js';
 import { ensureRecipeTables } from '../../lib/recipes.js';
 import { ensureColumn } from '../../lib/db/schema-helpers.js';
+import { collectCreditBalance } from '../../lib/split-payments.js';
 
 const dbPath = path.join(os.tmpdir(), `event-e2e-${process.pid}-${Date.now()}.db`);
 const db = new PosDatabase(dbPath);
@@ -289,4 +290,92 @@ test('the Summary Report counts the event once, even though a bill now exists', 
     'total sales is exactly restaurant + events'
   );
   assert.notEqual(r.revenue.events, 70000, 'the event must not be doubled by its own bill');
+});
+
+test('event Cash + Credit split uses the shared customer ledger and recognises the full sale once', async () => {
+  await db.run(
+    `INSERT INTO customers (name, phone, current_credit, credit_limit, is_blacklisted)
+     VALUES ('Event Credit Guest', '9800000001', 0, 50000, 0)`
+  );
+  const customer = await db.get(`SELECT * FROM customers WHERE phone = '9800000001'`);
+  await db.run(
+    `INSERT INTO events
+       (event_number, event_type, event_date, status, payment_status, customer_id,
+        subtotal, total_amount, outstanding_amount, created_at, updated_at)
+     VALUES ('EVT-CREDIT-1', 'Wedding', ?, 'CONFIRMED', 'UNPAID', ?,
+             35000, 35000, 35000, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+    [DAY, customer.id]
+  );
+  const creditEvent = await db.get(`SELECT id FROM events WHERE event_number = 'EVT-CREDIT-1'`);
+  await db.run(
+    `INSERT INTO event_menu_lines
+       (event_id, line_type, item_name, quantity, unit_price, line_total,
+        is_complimentary, consumes_inventory, sort_order, created_at, updated_at)
+     VALUES (?, 'package', 'Wedding package', 50, 700, 35000, 0, 1, 0,
+             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+    [creditEvent.id]
+  );
+
+  const result = await finaliseBilling(db, creditEvent.id, {
+    allocations: [
+      { method: 'cash', amount: 10000, cash_tendered: 10000 },
+      { method: 'credit', amount: 25000, due_date: '2026-09-20', notes: 'Wedding balance' },
+    ],
+    entry_date: DAY,
+  }, actor);
+
+  assert.equal(result.revenue_recognised, 35000, 'credit delays cash, never revenue recognition');
+  assert.equal(result.collected, 10000);
+  assert.equal(result.bill.status, 'partially_paid');
+  assert.equal(result.bill.outstanding, 25000);
+  assert.equal(result.event.payment_status, 'PARTIALLY_PAID');
+  assert.equal(Number(result.event.deposit_total), 10000, 'credit is not a deposit or receipt');
+
+  const allocations = await db.all(
+    `SELECT method, amount, settlement_status FROM bill_payment_allocations
+      WHERE bill_id = ? ORDER BY method`, [result.bill.bill_id]
+  );
+  assert.deepEqual(allocations.map((r) => [r.method, Number(r.amount), r.settlement_status]), [
+    ['cash', 10000, 'received'],
+    ['credit', 25000, 'outstanding'],
+  ]);
+  const ledger = await db.get(
+    `SELECT debit, entry_type FROM customer_ledger WHERE bill_id = ?`, [result.bill.bill_id]
+  );
+  assert.equal(Number(ledger.debit), 25000);
+  assert.equal(ledger.entry_type, 'credit_sale');
+  const afterSale = await db.get('SELECT current_credit FROM customers WHERE id = ?', [customer.id]);
+  assert.equal(Number(afterSale.current_credit), 25000);
+
+  const revenueBeforeCollection = await db.get(
+    `SELECT COALESCE(SUM(jl.credit-jl.debit),0) AS amount
+       FROM journal_lines jl JOIN accounts a ON a.id=jl.account_id WHERE a.code='4010'`
+  );
+  const collection = await collectCreditBalance(db, {
+    billId: result.bill.bill_id,
+    allocations: [{ method: 'cash', amount: 10000, cash_tendered: 10000 }],
+    actorRole: 'admin', requestKey: 'event-credit-collection-1',
+  });
+  assert.equal(collection.outstanding, 15000);
+  const afterCollection = await db.get('SELECT current_credit FROM customers WHERE id = ?', [customer.id]);
+  assert.equal(Number(afterCollection.current_credit), 15000);
+  const eventAfterCollection = await db.get(
+    'SELECT outstanding_amount, payment_status, deposit_total FROM events WHERE id=?', [creditEvent.id]
+  );
+  assert.equal(Number(eventAfterCollection.outstanding_amount), 15000);
+  assert.equal(eventAfterCollection.payment_status, 'PARTIALLY_PAID');
+  assert.equal(Number(eventAfterCollection.deposit_total), 20000,
+    'the event payment history stays in sync when shared AR receives money');
+  const eventCollection = await db.get(
+    `SELECT amount, payment_method FROM event_deposits
+      WHERE event_id=? AND notes LIKE 'Credit collection%'`, [creditEvent.id]
+  );
+  assert.equal(Number(eventCollection.amount), 10000);
+  assert.equal(eventCollection.payment_method, 'cash');
+  const revenueAfterCollection = await db.get(
+    `SELECT COALESCE(SUM(jl.credit-jl.debit),0) AS amount
+       FROM journal_lines jl JOIN accounts a ON a.id=jl.account_id WHERE a.code='4010'`
+  );
+  assert.equal(Number(revenueAfterCollection.amount), Number(revenueBeforeCollection.amount),
+    'collecting event credit moves AR to cash and must not create a second sale');
 });

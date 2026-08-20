@@ -61,7 +61,8 @@ export default function Quotation({ event, lines, onChanged, addToast }) {
     });
   }, []);
 
-  const locked = ['CONFIRMED', 'PLANNING', 'FINALIZED', 'IN_PROGRESS'].includes(event.status);
+  const locked = ['PLANNING', 'FINALIZED', 'IN_PROGRESS'].includes(event.status)
+    || (event.status === 'CONFIRMED' && Boolean(event.confirmed_at || event.quoted_at));
   const closed = ['COMPLETED', 'CANCELLED'].includes(event.status);
 
   /**

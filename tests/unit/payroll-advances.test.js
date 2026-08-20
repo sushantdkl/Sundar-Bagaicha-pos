@@ -89,3 +89,27 @@ test('payroll cannot deduct more than the outstanding advance', async () => {
     /cannot exceed the outstanding/i
   );
 });
+
+test('payroll cannot make the active cash drawer negative', async () => {
+  await assert.rejects(
+    () => recordPayment(db, {
+      employee_id: employeeId,
+      gross_amount: 1,
+      advance_deduction: 0,
+      amount: 1,
+      method: 'cash',
+    }, actor.id),
+    /not enough cash in the active drawer for this salary payment/i
+  );
+});
+
+test('salary advances cannot make the active cash drawer negative', async () => {
+  await assert.rejects(
+    () => recordAdvance(db, {
+      employee_id: employeeId,
+      amount: 1,
+      method: 'cash',
+    }, actor.id),
+    /not enough cash in the active drawer for this salary advance/i
+  );
+});

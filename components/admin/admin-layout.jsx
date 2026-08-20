@@ -525,6 +525,16 @@ export default function AdminLayout({ children }) {
     { icon: Receipt, label: 'Supplier Ledger', href: '/cashier/accounts-payable', color: 'text-orange-700' },
 
     {
+      label: 'Menu',
+      tint: 'blue',
+      items: [
+        { icon: Package, label: 'Menu Items', href: '/cashier/products', color: 'text-blue-600', requiredPermission: 'menu.products.manage' },
+        { icon: FolderOpen, label: 'Categories', href: '/cashier/categories', color: 'text-purple-600', requiredPermission: 'menu.categories.manage' },
+        { icon: ChefHat, label: 'Recipes', href: '/cashier/recipes', color: 'text-rose-600', requiredPermission: 'menu.recipes.manage' },
+      ],
+    },
+
+    {
       label: 'Operations',
       tint: 'amber',
       items: [
@@ -541,10 +551,24 @@ export default function AdminLayout({ children }) {
       label: 'Inventory',
       tint: 'indigo',
       items: [
+        { icon: Gauge, label: 'Inventory Dashboard', href: '/cashier/inventory/dashboard', color: 'text-indigo-700', requiredPermission: 'inventory.dashboard.view' },
         { icon: Warehouse, label: 'All Inventory', href: '/cashier/inventory', color: 'text-indigo-600' },
+        { icon: FolderOpen, label: 'Inventory Categories', href: '/cashier/inventory-categories', color: 'text-violet-600', requiredPermission: 'inventory.categories.manage' },
+        { icon: Ruler, label: 'Unit Conversion', href: '/cashier/unit-conversion', color: 'text-sky-600', requiredPermission: 'inventory.unit_conversions.manage' },
         { icon: Truck, label: 'Purchases', href: '/cashier/purchases', color: 'text-teal-600', requiredPermission: 'purchases.view' },
         { icon: Building2, label: 'Suppliers', href: '/cashier/suppliers', color: 'text-slate-600', requiredPermission: 'suppliers.view' },
         { icon: Trash, label: 'Wastage', href: '/cashier/wastage', color: 'text-red-600' },
+      ],
+    },
+    {
+      label: 'Events',
+      tint: 'fuchsia',
+      items: [
+        { icon: PartyPopper, label: 'Events Dashboard', href: '/cashier/events', color: 'text-fuchsia-700', requiredPermission: 'events.view' },
+        { icon: CalendarRange, label: 'Events Calendar', href: '/cashier/events/calendar', color: 'text-violet-600', requiredPermission: 'events.view' },
+        { icon: LayoutGrid, label: 'Event Spaces', href: '/cashier/events/spaces', color: 'text-teal-700', requiredPermission: 'events.view' },
+        { icon: Layers, label: 'Event Packages', href: '/cashier/events/packages', color: 'text-amber-700', requiredPermission: 'events.view' },
+        { icon: TrendingUp, label: 'Event Reports', href: '/cashier/events/reports', color: 'text-emerald-700', requiredPermission: 'events.reports' },
       ],
     },
     {
@@ -552,6 +576,7 @@ export default function AdminLayout({ children }) {
       tint: 'emerald',
       items: [
         { icon: Wallet, label: 'Expenses', href: '/cashier/expenses', color: 'text-emerald-600' },
+        { icon: PiggyBank, label: 'Savings & Deposits', href: '/cashier/savings', color: 'text-sky-700', requiredPermission: 'savings.manage' },
         { icon: ArrowRightLeft, label: 'Cash Exchange', href: '/cashier/cash-exchange', color: 'text-amber-600' },
         { icon: Wallet, label: 'Cash Drawer', href: '/cashier/cash-drawer', color: 'text-orange-600' },
         { icon: CalendarClock, label: 'Opening & Closing', href: '/cashier/business-days', color: 'text-gray-700' },

@@ -11,7 +11,7 @@ import { composeInventoryDashboard } from '@/lib/inventory-dashboard.js';
  */
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'inventory.dashboard.view' });
     if (auth.error) return auth.error;
 
     const { searchParams } = new URL(request.url);

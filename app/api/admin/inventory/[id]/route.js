@@ -7,7 +7,7 @@ import { normalizeName } from '@/lib/inventory-ledger.js';
 
 export async function GET(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'kitchen'] });
+    const auth = await requireAuth(request, { roles: ['admin', 'kitchen', 'cashier'] });
     if (auth.error) return auth.error;
 
     const { id } = await params;

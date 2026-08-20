@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import AdminLayout from '@/components/admin/admin-layout';
 import { ExternalLink, Pencil, Plus } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
 import { friendlyFromError } from '@/lib/friendly-message';
 import { apiJson } from '@/lib/authed-fetch';
@@ -19,6 +20,8 @@ import RecipePanel from '@/components/inventory/recipe-panel';
 import { formatNepalDate } from '@/lib/time-utils';
 
 export default function RecipesPage() {
+  const pathname = usePathname();
+  const recipesBase = pathname?.startsWith('/cashier') ? '/cashier/recipes' : '/admin/recipes';
   const { addToast } = useToast();
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -200,7 +203,7 @@ export default function RecipesPage() {
               <button type="button" title="Edit recipe" aria-label="Edit recipe" onClick={() => setPanel({ id: row.id })} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-900">
                 <Pencil className="h-4 w-4" />
               </button>
-              <Link href={`/admin/recipes/${row.id}`} title="Open profile" aria-label="Open profile" className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-900">
+              <Link href={`${recipesBase}/${row.id}`} title="Open profile" aria-label="Open profile" className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-900">
                 <ExternalLink className="h-4 w-4" />
               </Link>
             </>

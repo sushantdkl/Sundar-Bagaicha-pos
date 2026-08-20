@@ -7,7 +7,7 @@ import AdminLayout from '@/components/admin/admin-layout';
 import { ArrowLeft, FileCheck2, History, Printer } from 'lucide-react';
 import { apiJson } from '@/lib/authed-fetch';
 import { useToast } from '@/components/ui/toast';
-import { money, dateLabel, clockLabel, errText } from '../../event-ui';
+import { money, dateLabel, clockLabel, errText, useEventsBasePath } from '../../event-ui';
 
 const AUDIENCES = [
   ['customer', 'Customer quotation', 'Prices, terms and cancellation policy.'],
@@ -17,6 +17,7 @@ const AUDIENCES = [
 
 export default function BeoPage() {
   const { id } = useParams();
+  const eventsBase = useEventsBasePath();
   const { addToast } = useToast();
   const [audience, setAudience] = useState('customer');
   const [data, setData] = useState(null);
@@ -61,7 +62,7 @@ export default function BeoPage() {
   return (
     <AdminLayout>
       <header className="print:hidden border-b border-gray-200 bg-white px-4 py-5 sm:px-6 lg:px-8">
-        <Link href={`/admin/events/${id}`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
+        <Link href={`${eventsBase}/${id}`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
           <ArrowLeft className="h-4 w-4" />Back to event
         </Link>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">

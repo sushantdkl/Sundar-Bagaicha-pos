@@ -63,6 +63,9 @@ const ALIASES = {
   'Plain Paratha Set': 'Plain Paratha.jpg',
   'Veg Burger': 'Veg Burgar.jpg',
   // Snacks
+  'Aalo Jeera': 'aalo jira.jpg',
+  'Aaloo Sadheko': 'aalo sadhenko.jpg',
+  'Bhatmas Sadheko': 'bhatmas shadeko.jpg',
   'Kaju Fry': 'Cashewnut Fry.jpg',
   'Peanuts Sadheko': 'Peanut Shadeko.jpg',
   'Veg Pakauda': 'Veg. Pakoda.jpg',
@@ -86,6 +89,7 @@ const ALIASES = {
   'Veg Chowmein': 'Veg. Chowmin.jpg',
   'Chicken Thukpa': 'Chicken Thupka.jpg',
   'Veg Thukpa': 'Veg. Thupka.jpg',
+  'American Chopsuey': 'american-chopsuey-1.webp',
   // Rice
   'Mixed Fried Rice': 'Mix Fried Rice.jpg',
   // Soups
@@ -102,6 +106,59 @@ const ALIASES = {
   'Strawberry / Banana / Mango Shake': 'Banana Milkshake.jpg',
   'Fresh Lime Soda': 'Lamonade.jpg',
   'Mint Mojito': 'Virgin Mojito.jpg',
+  'Grand Breakfast Combo': 'grand breakfast combo.jpg',
+  'Roti Curry': 'roti curry.jpg',
+  'Veg Khana Set': 'veg thali.jpg',
+  'Chicken Khana Set': 'chicken khana set.jpg',
+  'Mutton Khana Set': 'mutton khana set.jpg',
+  'Caffe Mocha': 'caffe motcha.jpg',
+  'Ice Cappuccino': 'iced cappucino.jpg',
+  'Cold Coffee': 'cold coffe.jpg',
+  // Beer
+  'Carlsberg Beer': 'Carlsberg-Danish-Pilsner-650ML.jpg',
+  'Gorkha Strong': 'Gorkha-Strong-Beer-Bottle-650ML.jpg',
+  'Tuborg Beer': 'Tuborg-Beer-Bottle-650ML.jpg',
+  'Barahsinghe': 'Barahsinghe-German-Malts-Craft-Pilsner-Bottle-650ML.jpg',
+  'Tuborg Gold': 'turborg gold.png',
+  'Tuborg Strong': 'turborg strong.webp',
+  'Tuborg Strong Small': 'turborg small.png',
+  'Big Master (Red / White)': 'Big-Master-Sweet-Red-750ML.jpg',
+  // Domestic spirits
+  '8848 Vodka': '8848-Vodka-750ML.jpg',
+  'Nude Vodka': 'Nude-Superior-Vodka-750ML.jpg',
+  'Ruslan': 'Ruslan-Premium-Vodka-750ML.jpg',
+  'Seto Bagh': 'Seto-Bagh-Vodka-750ML-.jpg',
+  'Smirnoff Vodka Red': 'Smirnoff-Vodka-750ML.jpg',
+  'Yeti Vodka': 'yeti vodka.png',
+  'Bandipur': 'bandipur.png',
+  'Black Chimney': 'Old-Durbar-Black-Chimney-Whisky-750ML.jpg',
+  'Golden Oak': 'Golden-Oak-750ML.jpg',
+  'Gurkhas & Guns': 'Gurkhas-and-Guns-750ML.jpg',
+  'Himalayan Reserve': 'The-Himalayan-Reserve-Whisky-.jpg',
+  'Old Durbar': 'Old-Durbar-Reserve-Whisky-.jpg',
+  'Signature Premium': 'Signature-Premier-Grain-.jpg',
+  'Signature Green': 'Signature-Rare-Aged.jpg',
+  'Yarchagumba': 'Yarchagumba-Golden-Sapphire-180ML.jpg',
+  'Honey Hunter Rum': 'Himalayan-Honey-Hunter-4-Years-Rum-750-ML-200x200.jpg',
+  'Khukuri Rum': 'Khukri-XXX.jpg',
+  'Khukuri Spice Rum': 'Khukri-Spice-.jpg',
+  'Old Monk Rum': 'Old-Monk-XXX-Rum-.jpg',
+  'Black Oak': 'Black-Oak-Whisky-750ML.jpg',
+  // Imported spirits
+  'Belvedere Vodka': 'belvedere-organic-vodka-page-produit.avif',
+  'Absolut': 'absolut vodka.avif',
+  'Grey Goose': 'hero-bottle-750ml.png',
+  'Black Label': 'Johnnie-Walker-Black-Label-1-LTR.jpg',
+  'Double Black': 'Johnnie-Walker-Double-Black-1LTR.jpg',
+  'Red Label': 'Johnnie-Walker-Red-Label-1LTR.jpg',
+  'Glenfiddich 12 Yrs': 'Glenfiddich-12-Years-1L.jpg',
+  'Jack Daniels': 'Jack-Daniels-1LTR.jpg',
+  'Jameson': 'Jameson-Irish-.jpg',
+  'Jameson Black': 'Jameson-Black-Barrel.avif',
+  'Jim Beam': 'Jim-Beam-White-1L.jpg',
+  'Vat 69': 'vat 69.png',
+  'Jagermeister': 'Jägermeister..webp',
+  'Tequila (Gold / Silver)': 'tequila.jpg',
 };
 
 /**
@@ -116,8 +173,8 @@ const CURATED = [
   },
   {
     item: 'Chicken Lollipop',
-    file: 'chicken-chilly.jpg',
-    shows: 'breaded fried chicken pieces with a dip, which is what a lollipop plate looks like',
+    file: 'Chicken Loly Pop.avif',
+    shows: 'the newly supplied Chicken Lollipop photograph',
   },
   {
     item: 'Green Salad',
@@ -128,7 +185,7 @@ const CURATED = [
 
 const norm = (s) => String(s ?? '')
   .toLowerCase()
-  .replace(/\.(jpe?g|png|webp)$/i, '')
+  .replace(/\.(jpe?g|png|webp|avif)$/i, '')
   .replace(/&/g, ' and ')
   .replace(/[^a-z0-9]+/g, ' ')
   .trim();
@@ -140,7 +197,7 @@ async function main() {
     console.error(`No dish photographs found: ${DISH_DIR} does not exist.`);
     process.exit(1);
   }
-  const files = fs.readdirSync(DISH_DIR).filter((f) => /\.(jpe?g|png|webp)$/i.test(f));
+  const files = fs.readdirSync(DISH_DIR).filter((f) => /\.(jpe?g|png|webp|avif)$/i.test(f));
   const named = files.filter((f) => !/^WhatsApp/i.test(f));
   console.log(`${files.length} photograph(s) in ${PUBLIC_PREFIX} (${named.length} usable, ${files.length - named.length} unnamed WhatsApp exports)`);
 
@@ -155,7 +212,13 @@ async function main() {
   for (const group of duplicates) console.log(`  duplicate image under ${group.length} names: ${group.join(', ')}`);
 
   const db = Database.getInstance();
-  const items = await db.all('SELECT id, name FROM menu_items ORDER BY id');
+  const items = await db.all(
+    `SELECT mi.id, mi.name, mi.image_url,
+            COALESCE(mc.name, 'Uncategorised') AS category
+       FROM menu_items mi
+       LEFT JOIN menu_categories mc ON mc.id = mi.category_id
+      ORDER BY mc.display_order, mc.name, mi.display_order, mi.name`
+  );
   const byItemName = new Map(items.map((i) => [norm(i.name), i]));
   const byFileName = new Map();
   for (const f of named) {
@@ -223,7 +286,22 @@ async function main() {
     console.log('Problems:');
     for (const p of problems) console.log(`  - ${p}`);
   }
-  console.log(`\n${items.length - assigned} items still show the branded fallback tile.`);
+  const coveredByOtherImage = items.filter((item) =>
+    item.image_url && !String(item.image_url).startsWith(`${PUBLIC_PREFIX}/`));
+  const missing = items.filter((item) =>
+    !usedItems.has(item.id) && !coveredByOtherImage.some((covered) => covered.id === item.id));
+  console.log(`\n${missing.length} item(s) still show the branded fallback tile.`);
+  if (missing.length) {
+    console.log('Menu items still missing an image:');
+    const byCategory = new Map();
+    for (const item of missing) {
+      if (!byCategory.has(item.category)) byCategory.set(item.category, []);
+      byCategory.get(item.category).push(item.name);
+    }
+    for (const [category, names] of byCategory) {
+      console.log(`  ${category} (${names.length}): ${names.join(', ')}`);
+    }
+  }
   if (Database.close) await Database.close();
 }
 

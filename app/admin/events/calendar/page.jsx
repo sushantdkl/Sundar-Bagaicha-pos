@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, Plus, RefreshCw } from 'lucide-react';
 import { apiJson } from '@/lib/authed-fetch';
 import { nepalDateString } from '@/lib/report-dates';
 import { useToast } from '@/components/ui/toast';
-import { STATUS_TONE, clockLabel, dateLabel, guestLabel , errText} from '../event-ui';
+import { STATUS_TONE, clockLabel, dateLabel, guestLabel, errText, useEventsBasePath } from '../event-ui';
 
 const pad = (n) => String(n).padStart(2, '0');
 const ymd = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
@@ -30,6 +30,7 @@ function monthGrid(year, month) {
 }
 
 export default function EventsCalendarPage() {
+  const eventsBase = useEventsBasePath();
   const { addToast } = useToast();
   const today = nepalDateString();
   const [cursor, setCursor] = useState(() => {
@@ -94,8 +95,8 @@ export default function EventsCalendarPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <button onClick={load} className={BTN}><RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />Refresh</button>
-            <Link href="/admin/events" className={BTN}>List view</Link>
-            <Link href="/admin/events/new" className={PRIMARY}><Plus className="h-4 w-4" />New Event</Link>
+            <Link href={eventsBase} className={BTN}>List view</Link>
+            <Link href={`${eventsBase}/new`} className={PRIMARY}><Plus className="h-4 w-4" />New Event</Link>
           </div>
         </div>
 
@@ -222,7 +223,7 @@ export default function EventsCalendarPage() {
             </dl>
             <div className="flex justify-end gap-2 border-t border-gray-200 px-5 py-4">
               <button onClick={() => setSelected(null)} className={BTN}>Close</button>
-              <Link href={`/admin/events/${selected.id}`} className={PRIMARY}>Open event</Link>
+              <Link href={`${eventsBase}/${selected.id}`} className={PRIMARY}>Open event</Link>
             </div>
           </div>
         </div>

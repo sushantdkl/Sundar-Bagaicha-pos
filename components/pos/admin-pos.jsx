@@ -190,9 +190,9 @@ export default function AdminPos() {
   const [customerSelection, setCustomerSelection] = useState(emptyCustomerSelection);
   const [deliveryAtCheckout, setDeliveryAtCheckout] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState('');
-  // Optional rider for a takeaway being sent out. Loaded once; an empty list
-  // simply hides the picker, so a venue that does not use executives sees no
-  // change to checkout.
+  // Optional rider for a takeaway being sent out. Loaded once; the payment
+  // panel keeps the field visible even when the list is empty so staff can see
+  // why assignment is unavailable.
   const [deliveryExecutives, setDeliveryExecutives] = useState([]);
   const [deliveryExecutiveId, setDeliveryExecutiveId] = useState('');
 
@@ -285,13 +285,13 @@ export default function AdminPos() {
     } catch (e) { notify(e.message, 'error'); }
   }, [notify]);
 
-  // A cashier without delivery_executives.view just gets an empty list and no
-  // picker; checkout is unaffected either way.
+  // An unavailable list leaves a visible empty state in checkout instead of
+  // making the assignment control mysteriously disappear.
   const fetchDeliveryExecutives = useCallback(async () => {
     try {
       const data = await api('/api/admin/delivery-executives');
       setDeliveryExecutives(data.executives || []);
-    } catch { /* picker stays hidden */ }
+    } catch { setDeliveryExecutives([]); }
   }, []);
 
   const fetchSettings = useCallback(async () => {

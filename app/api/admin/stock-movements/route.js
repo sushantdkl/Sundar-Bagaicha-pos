@@ -7,7 +7,7 @@ import { readListParams } from '@/lib/paginate.js';
 
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'menu.recipes.manage' });
     if (auth.error) return auth.error;
 
     const db = Database.getInstance();

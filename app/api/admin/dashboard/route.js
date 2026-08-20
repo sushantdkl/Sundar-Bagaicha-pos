@@ -101,13 +101,17 @@ export async function GET(request) {
       voidedBillsRow,
       cancelledKotsRow,
     ] = await Promise.all([
-      db.get(`SELECT COALESCE(SUM(amount), 0) as total FROM bill_payments WHERE ${inDay('created_at')}`, [tB.startUtc, tB.endUtcExclusive]).catch(() => ({ total: 0 })),
-      db.get(`SELECT COALESCE(SUM(amount), 0) as total FROM bill_payments WHERE ${inDay('created_at')}`, [yB.startUtc, yB.endUtcExclusive]).catch(() => ({ total: 0 })),
+      db.get(`SELECT COALESCE(SUM(grand_total), 0) as total FROM bills
+        WHERE ${inDay('created_at')} AND LOWER(COALESCE(status,'')) IN ('paid','partially_paid','reopened')`,
+      [tB.startUtc, tB.endUtcExclusive]).catch(() => ({ total: 0 })),
+      db.get(`SELECT COALESCE(SUM(grand_total), 0) as total FROM bills
+        WHERE ${inDay('created_at')} AND LOWER(COALESCE(status,'')) IN ('paid','partially_paid','reopened')`,
+      [yB.startUtc, yB.endUtcExclusive]).catch(() => ({ total: 0 })),
       db.get(`SELECT COUNT(*) as c FROM orders WHERE ${orderDay.sql} AND COALESCE(status,'') != 'cancelled'`, orderDay.params).catch(() => ({ c: 0 })),
       db.get(`SELECT COUNT(*) as c FROM orders WHERE ${inDay('created_at')} AND COALESCE(status,'') != 'cancelled'`, [yB.startUtc, yB.endUtcExclusive]).catch(() => ({ c: 0 })),
       db.get(
         `SELECT COUNT(*) as c, COALESCE(AVG(grand_total), 0) as avg_ticket, COALESCE(SUM(grand_total), 0) as revenue
-         FROM bills WHERE ${billDay.sql} AND LOWER(COALESCE(status,'')) IN ('paid','reopened')`,
+         FROM bills WHERE ${billDay.sql} AND LOWER(COALESCE(status,'')) IN ('paid','partially_paid','reopened')`,
         billDay.params
       ).catch(() => ({ c: 0, avg_ticket: 0, revenue: 0 })),
       // Today's sales split by channel. An event bill is an ordinary bill with
@@ -119,7 +123,7 @@ export async function GET(request) {
            COALESCE(SUM(CASE WHEN o.event_id IS NULL THEN b.grand_total ELSE 0 END), 0) AS restaurant_sales,
            COUNT(CASE WHEN o.event_id IS NOT NULL THEN 1 END) AS event_bills
          FROM bills b LEFT JOIN orders o ON o.id = b.order_id
-         WHERE ${billDay.sql} AND LOWER(COALESCE(b.status,'')) IN ('paid','reopened')`,
+         WHERE ${billDay.sql} AND LOWER(COALESCE(b.status,'')) IN ('paid','partially_paid','reopened')`,
         billDay.params
       ).catch(() => ({ event_sales: 0, restaurant_sales: 0, event_bills: 0 })),
       db.get(`SELECT COUNT(*) as c FROM orders WHERE ${LIVE_ORDER}`).catch(() => ({ c: 0 })),
@@ -222,7 +226,7 @@ export async function GET(request) {
         SELECT ${nd('COALESCE(paid_at, created_at)')} as d, COUNT(*) as orders, COALESCE(SUM(grand_total), 0) as revenue
         FROM bills
         WHERE ${inDay('COALESCE(paid_at, created_at)')}
-          AND LOWER(COALESCE(status, 'paid')) IN ('paid','reopened')
+          AND LOWER(COALESCE(status, 'paid')) IN ('paid','partially_paid','reopened')
         GROUP BY ${nd('COALESCE(paid_at, created_at)')}
         ORDER BY d ASC
       `, [wB.startUtc, wB.endUtcExclusive]).catch(() => []),
@@ -286,7 +290,7 @@ export async function GET(request) {
         SELECT COALESCE(SUM(discount_amount), 0) as total
         FROM bills
         WHERE ${billDay.sql}
-          AND LOWER(COALESCE(status,'')) IN ('paid','reopened')
+          AND LOWER(COALESCE(status,'')) IN ('paid','partially_paid','reopened')
       `, billDay.params).catch(() => ({ total: 0 })),
       // What was thrown away today. Counted on the same business day the rest
       // of this screen uses, and valued so a run of small voids and one large

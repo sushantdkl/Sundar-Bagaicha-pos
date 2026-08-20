@@ -36,12 +36,19 @@ test('defaults reproduce today\'s hardcoded behavior before any admin edit', asy
   assert.equal(hasPermission('waiter', 'bills.void'), false);
   assert.equal(hasPermission('cashier', 'bills.void'), true);
   assert.equal(hasPermission('admin', 'bills.void'), true); // admin always allowed
-  assert.equal(hasPermission('cashier', 'purchases.view'), false);
-  assert.equal(hasPermission('cashier', 'purchases.create'), false);
-  assert.equal(hasPermission('cashier', 'purchases.import'), false);
-  assert.equal(hasPermission('cashier', 'suppliers.manage'), false);
+  assert.equal(hasPermission('cashier', 'purchases.view'), true);
+  assert.equal(hasPermission('cashier', 'purchases.create'), true);
+  assert.equal(hasPermission('cashier', 'purchases.import'), true);
+  assert.equal(hasPermission('cashier', 'purchases.edit'), true);
+  assert.equal(hasPermission('cashier', 'purchases.void'), true);
+  assert.equal(hasPermission('cashier', 'suppliers.view'), true);
+  assert.equal(hasPermission('cashier', 'suppliers.manage'), true);
   assert.equal(hasPermission('cashier', 'payroll.view'), false);
   assert.equal(hasPermission('cashier', 'payroll.advances.create'), false);
+  assert.equal(hasPermission('cashier', 'menu.products.manage'), true);
+  assert.equal(hasPermission('cashier', 'inventory.dashboard.view'), true);
+  assert.equal(hasPermission('cashier', 'savings.manage'), true);
+  assert.equal(hasPermission('cashier', 'delivery_executives.view'), true);
 });
 
 test('every curated key has a default for every managed role', async () => {
@@ -64,18 +71,17 @@ test('admin can grant a role a previously-blocked action, and it takes effect im
   assert.equal(hasPermission('waiter', 'bills.void'), true);
 });
 
-test('admin can grant purchase access to a cashier without granting destructive actions', async () => {
+test('admin can revoke destructive purchase actions without removing routine access', async () => {
   await setRolePermissions(db, [
-    { role: 'cashier', key: 'purchases.view', allowed: true },
-    { role: 'cashier', key: 'purchases.create', allowed: true },
-    { role: 'cashier', key: 'purchases.import', allowed: true },
+    { role: 'cashier', key: 'purchases.void', allowed: false },
+    { role: 'cashier', key: 'suppliers.manage', allowed: false },
   ], admin);
   invalidatePermissionCache();
   await ensurePermissionCache(db);
   assert.equal(hasPermission('cashier', 'purchases.view'), true);
   assert.equal(hasPermission('cashier', 'purchases.create'), true);
   assert.equal(hasPermission('cashier', 'purchases.import'), true);
-  assert.equal(hasPermission('cashier', 'purchases.edit'), false);
+  assert.equal(hasPermission('cashier', 'purchases.edit'), true);
   assert.equal(hasPermission('cashier', 'purchases.void'), false);
   assert.equal(hasPermission('cashier', 'suppliers.manage'), false);
 });
@@ -155,39 +161,39 @@ test('every events permission is in the catalogue exactly once, under one catego
   }
 });
 
-test('the Events module stays admin-only until an admin delegates it', async () => {
+test('cashier receives the Events module by default while other staff roles do not', async () => {
   invalidatePermissionCache();
   await ensurePermissionCache(db);
   for (const key of EVENT_KEYS) {
     assert.equal(hasPermission('admin', key), true, `admin must always hold ${key}`);
-    for (const role of MANAGED_ROLES) {
-      assert.equal(hasPermission(role, key), false, `${role} must not hold ${key} by default`);
-    }
+    assert.equal(hasPermission('cashier', key), true, `cashier must hold ${key} by default`);
+    assert.equal(hasPermission('waiter', key), false, `waiter must not hold ${key} by default`);
+    assert.equal(hasPermission('kitchen', key), false, `kitchen must not hold ${key} by default`);
   }
 });
 
-test('an events permission can be delegated one key at a time, and only that key', async () => {
-  await setRolePermissions(db, [{ role: 'cashier', key: 'events.view', allowed: true }], admin);
+test('an events permission can be revoked one key at a time without revoking the module', async () => {
+  await setRolePermissions(db, [{ role: 'cashier', key: 'events.discount', allowed: false }], admin);
   invalidatePermissionCache();
   await ensurePermissionCache(db);
 
   assert.equal(hasPermission('cashier', 'events.view'), true);
-  // Seeing an event must not imply starting it, billing it or discounting it.
-  for (const key of EVENT_KEYS.filter((k) => k !== 'events.view')) {
-    assert.equal(hasPermission('cashier', key), false, `events.view must not imply ${key}`);
+  assert.equal(hasPermission('cashier', 'events.discount'), false);
+  for (const key of EVENT_KEYS.filter((k) => k !== 'events.discount')) {
+    assert.equal(hasPermission('cashier', key), true, `revoking events.discount must not revoke ${key}`);
   }
   // Nobody else was affected.
   assert.equal(hasPermission('waiter', 'events.view'), false);
   assert.equal(hasPermission('kitchen', 'events.view'), false);
 });
 
-test('delegating an events permission is written to the audit trail', async () => {
-  await setRolePermissions(db, [{ role: 'cashier', key: 'events.billing', allowed: true }], admin);
+test('revoking an events permission is written to the audit trail', async () => {
+  await setRolePermissions(db, [{ role: 'cashier', key: 'events.billing', allowed: false }], admin);
   const [latest] = await permissionAuditHistory(db, { limit: 1 });
   assert.equal(latest.permission_key, 'events.billing');
   assert.equal(latest.role, 'cashier');
-  assert.equal(latest.previous_value, 0);
-  assert.equal(latest.new_value, 1);
+  assert.equal(latest.previous_value, 1);
+  assert.equal(latest.new_value, 0);
   assert.equal(latest.actor_name, 'Admin One');
 });
 

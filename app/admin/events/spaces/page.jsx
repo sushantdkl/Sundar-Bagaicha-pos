@@ -7,7 +7,7 @@ import { ArrowLeft, CalendarClock, Pencil, Plus, RefreshCw, X } from 'lucide-rea
 import { apiJson } from '@/lib/authed-fetch';
 import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/confirm';
-import { STATUS_TONE, money, dateLabel, timeRange , errText} from '../event-ui';
+import { STATUS_TONE, money, dateLabel, timeRange, errText, useEventsBasePath } from '../event-ui';
 
 const EMPTY = {
   name: '', description: '', min_capacity: '', max_capacity: '',
@@ -16,6 +16,7 @@ const EMPTY = {
 };
 
 export default function EventSpacesPage() {
+  const eventsBase = useEventsBasePath();
   const { addToast } = useToast();
   const { confirm } = useConfirm();
   const [spaces, setSpaces] = useState([]);
@@ -90,7 +91,7 @@ export default function EventSpacesPage() {
   return (
     <AdminLayout>
       <header className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6 lg:px-8">
-        <Link href="/admin/events" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
+        <Link href={eventsBase} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
           <ArrowLeft className="h-4 w-4" />Events
         </Link>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
@@ -225,7 +226,7 @@ export default function EventSpacesPage() {
                   {viewing.bookings.map((b) => (
                     <tr key={b.id}>
                       <td className="px-4 py-2">
-                        <Link href={`/admin/events/${b.id}`} className="font-medium text-gray-900 hover:underline">{b.event_number}</Link>
+                        <Link href={`${eventsBase}/${b.id}`} className="font-medium text-gray-900 hover:underline">{b.event_number}</Link>
                         <p className="text-xs text-gray-500">{b.title || b.event_type}</p>
                       </td>
                       <td className="whitespace-nowrap px-4 py-2">{dateLabel(b.event_date)}</td>

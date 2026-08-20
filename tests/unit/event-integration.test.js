@@ -10,7 +10,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   EVENT_STATUS_TRANSITIONS, BILLABLE_STATUSES,
-  canTransition, canBill, assertTransition, assertBillable,
+  canTransition, canBill, assertTransition, assertBillable, isQuotationLocked,
 } from '../../lib/events/constants.js';
 
 /* ------------------------------------------------------------- lifecycle */
@@ -19,6 +19,14 @@ test('the simple workflow needs three clicks: inquiry, confirm, bill', () => {
   // A birthday booked over the phone must not be dragged through a contract.
   assert.ok(canTransition('INQUIRY', 'CONFIRMED'), 'inquiry must confirm directly');
   assert.ok(canBill('CONFIRMED'), 'a confirmed event must be billable straight away');
+});
+
+test('a directly confirmed booking stays open for its initial menu plan', () => {
+  assert.equal(isQuotationLocked({ status: 'CONFIRMED', confirmed_at: null, quoted_at: null }), false);
+  assert.equal(isQuotationLocked({ status: 'CONFIRMED', confirmed_at: '2026-08-20' }), true);
+  assert.equal(isQuotationLocked({ status: 'CONFIRMED', quoted_at: '2026-08-20' }), true);
+  assert.equal(isQuotationLocked({ status: 'PLANNING' }), true);
+  assert.equal(isQuotationLocked({ status: 'INQUIRY' }), false);
 });
 
 test('the advanced workflow is still available end to end', () => {

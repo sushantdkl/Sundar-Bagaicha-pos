@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Database from '@/lib/db/index';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
-import { accountBalance } from '@/lib/accounting.js';
+import { accountBalance, currentDrawerId } from '@/lib/accounting.js';
 import { createSavingsDeposit, ensureSavingsSchema } from '@/lib/savings.js';
 import { nepalDateString } from '@/lib/report-dates.js';
 
@@ -18,7 +18,7 @@ async function period(db, start, end) {
 
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'savings.manage' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     await ensureSavingsSchema(db);
@@ -44,15 +44,16 @@ export async function GET(request) {
       WHERE ${where} ORDER BY d.deposit_date DESC,d.id DESC LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`, params);
     const periods = await Promise.all([period(db, today, today), period(db, shift(today, -2), today), period(db, shift(today, -6), today), period(db, monthStart, today)]);
     const clearing = await db.get(`SELECT COALESCE(SUM(jl.debit-jl.credit),0) AS balance FROM journal_lines jl JOIN accounts a ON a.id=jl.account_id WHERE a.code IN ('1020','1100','1110','1120','1130','1140')`);
+    const drawerId = await currentDrawerId(db);
     return NextResponse.json({ rows, pagination: { page, pageSize, total: Number(count.n || 0), pages: Math.max(1, Math.ceil(Number(count.n || 0) / pageSize)) },
       listed_total: round2(count.total), periods: { today: periods[0], last3: periods[1], last7: periods[2], month: periods[3] },
-      balances: { cash: round2(await accountBalance(db, '1010')), online: round2(clearing.balance), savings: round2(await accountBalance(db, '1040')) } });
+      balances: { cash: round2(await accountBalance(db, '1010', drawerId ? { drawerId } : {})), online: round2(clearing.balance), savings: round2(await accountBalance(db, '1040')) } });
   } catch (error) { return handleRouteError(error, 'Failed to load savings deposits.'); }
 }
 
 export async function POST(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'savings.manage' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     const deposit = await createSavingsDeposit(db, await request.json(), auth.user?.id);

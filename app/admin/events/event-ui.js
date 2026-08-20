@@ -4,7 +4,15 @@
  * Status vocabulary is re-exported from lib/events/constants.js so the UI can
  * never drift from what the database actually accepts.
  */
+import { usePathname } from 'next/navigation';
+
 export { EVENT_STATUSES, EVENT_STATUS, EVENT_PAYMENT_STATUSES } from '@/lib/events/constants.js';
+
+/** Keep shared Events pages inside the panel that opened them. */
+export function useEventsBasePath() {
+  const pathname = usePathname();
+  return pathname?.startsWith('/cashier/events') ? '/cashier/events' : '/admin/events';
+}
 
 export const STATUS_TONE = {
   INQUIRY: 'bg-slate-100 text-slate-700',
@@ -122,4 +130,10 @@ export const PAYMENT_METHODS = [
   ['esewa', 'eSewa'],
   ['khalti', 'Khalti'],
   ['qr', 'QR / Fonepay'],
+];
+
+export const EVENT_SETTLEMENT_METHODS = [
+  ['cash', 'Cash'],
+  ['qr', 'QR'],
+  ['credit', 'Customer credit'],
 ];
