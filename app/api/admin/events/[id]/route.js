@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Database from '@/lib/db/index';
 import { requireAuth, requirePermission, handleRouteError } from '@/lib/api-guard.js';
-import { getEvent, updateEvent, changeEventStatus, cancelEvent } from '@/lib/events/service.js';
+import { getEvent, updateEvent, changeEventStatus, cancelEvent, completeWithoutCharge } from '@/lib/events/service.js';
 import { eventAuditHistory } from '@/lib/events/audit.js';
 import { listLines } from '@/lib/events/lines.js';
 
@@ -23,8 +23,9 @@ export async function GET(request, { params }) {
 }
 
 /**
- * PATCH handles three distinct intents, kept on one route so the client has a
- * single endpoint per event: field edits, a status transition, or a cancel.
+ * PATCH handles four distinct intents, kept on one route so the client has a
+ * single endpoint per event: field edits, a status transition, a cancel, or a
+ * no-charge completion.
  */
 export async function PATCH(request, { params }) {
   try {
@@ -40,6 +41,14 @@ export async function PATCH(request, { params }) {
       requirePermission(auth.user, 'events.cancel');
       const event = await cancelEvent(db, id, body.reason, auth.user);
       return NextResponse.json({ message: 'Event cancelled.', event });
+    }
+    // Completing normally means settling (POST .../billing). This is the
+    // documented exception for a genuinely free event, and it carries the
+    // cancel-grade permission because it closes a booking without revenue.
+    if (body.action === 'complete_no_charge') {
+      requirePermission(auth.user, 'events.cancel');
+      const event = await completeWithoutCharge(db, id, body.reason, auth.user);
+      return NextResponse.json({ message: 'Event completed without a charge.', event });
     }
     if (body.action === 'status') {
       requirePermission(auth.user, 'events.confirm');

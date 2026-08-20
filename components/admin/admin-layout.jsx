@@ -8,7 +8,8 @@ import {
   Building2, ChevronDown, Ruler, Layers, TrendingUp, Activity,
   BookOpen, ScrollText, Coins, Landmark, CreditCard, ArrowRightLeft, Undo2, Receipt, Gauge, ClipboardCheck,
   BarChart3, Globe, ReceiptText, CalendarClock, BellRing, Calendar,
-  PiggyBank, ShieldCheck, WalletCards, PartyPopper, CalendarRange
+  PiggyBank, ShieldCheck, WalletCards, PartyPopper, CalendarRange,
+  Bike, IdCard, CalendarCheck, CalendarDays
 } from 'lucide-react';
 import LogoutButton from '@/components/ui/logout-button';
 import { isNavHidden } from '@/lib/deployment';
@@ -401,6 +402,16 @@ export default function AdminLayout({ children }) {
     { icon: Receipt, label: 'POS', href: '/admin/pos', color: 'text-emerald-700' },
     { icon: BarChart3, label: 'Analytics', href: '/admin/analytics', color: 'text-indigo-600' },
     { icon: ScrollText, label: 'Summary', href: '/admin/summary-report', color: 'text-rose-700' },
+    { icon: FileText, label: 'Reports', href: '/admin/reports', color: 'text-purple-600' },
+    {
+      label: 'Menu',
+      tint: 'blue',
+      items: [
+        { icon: Package, label: 'Menu Items', href: '/admin/products', color: 'text-blue-600' },
+        { icon: FolderOpen, label: 'Categories', href: '/admin/categories', color: 'text-purple-600' },
+        { icon: ChefHat, label: 'Recipes', href: '/admin/recipes', color: 'text-rose-600' },
+      ],
+    },
     {
       label: 'Operations',
       tint: 'amber',
@@ -413,7 +424,29 @@ export default function AdminLayout({ children }) {
         { icon: ChefHat, label: 'KOT', href: '/admin/kot', color: 'text-amber-600' },
         { icon: LayoutGrid, label: 'Tables', href: '/admin/tables', color: 'text-cyan-600' },
         { icon: Layers, label: 'Table Management', href: '/admin/table-management', color: 'text-sky-600' },
+        { icon: Bike, label: 'Delivery Executives', href: '/admin/delivery-executives', color: 'text-orange-700', requiredPermission: 'delivery_executives.view' },
         { icon: Activity, label: 'Kitchen Analytics', href: '/admin/kitchen-analytics', color: 'text-orange-600' },
+      ],
+    },
+
+    // Who owes us, and who we owe — one click from anywhere. Both were buried
+    // inside Accounting under their bookkeeping names. The labels are what
+    // daily users think in; the account codes behind them are untouched.
+    { icon: Users, label: 'Customers', href: '/admin/customers', color: 'text-pink-600' },
+    { icon: Receipt, label: 'Customer Ledger', href: '/admin/accounts-receivable', color: 'text-teal-700' },
+    { icon: Receipt, label: 'Supplier Ledger', href: '/admin/accounts-payable', color: 'text-orange-700' },
+
+    {
+      label: 'Inventory',
+      tint: 'indigo',
+      items: [
+        { icon: Gauge, label: 'Inventory Dashboard', href: '/admin/inventory/dashboard', color: 'text-indigo-700' },
+        { icon: Warehouse, label: 'All Inventory', href: '/admin/inventory', color: 'text-indigo-600' },
+        { icon: FolderOpen, label: 'Inventory Categories', href: '/admin/inventory-categories', color: 'text-violet-600' },
+        { icon: Ruler, label: 'Unit Conversion', href: '/admin/unit-conversion', color: 'text-sky-600' },
+        { icon: Truck, label: 'Purchases', href: '/admin/purchases', color: 'text-teal-600' },
+        { icon: Building2, label: 'Suppliers', href: '/admin/suppliers', color: 'text-slate-600' },
+        { icon: Trash, label: 'Wastage', href: '/admin/wastage', color: 'text-red-600' },
       ],
     },
     {
@@ -428,38 +461,6 @@ export default function AdminLayout({ children }) {
       ],
     },
     {
-      label: 'Menu',
-      tint: 'blue',
-      items: [
-        { icon: Package, label: 'Menu', href: '/admin/products', color: 'text-blue-600' },
-        { icon: FolderOpen, label: 'Categories', href: '/admin/categories', color: 'text-purple-600' },
-        { icon: ChefHat, label: 'Recipes', href: '/admin/recipes', color: 'text-rose-600' },
-      ],
-    },
-    {
-      label: 'Inventory',
-      tint: 'indigo',
-      items: [
-        { icon: Gauge, label: 'Inventory Dashboard', href: '/admin/inventory/dashboard', color: 'text-indigo-700' },
-        { icon: Warehouse, label: 'Inventory', href: '/admin/inventory', color: 'text-indigo-600' },
-        { icon: FolderOpen, label: 'Inventory Categories', href: '/admin/inventory-categories', color: 'text-violet-600' },
-        { icon: Ruler, label: 'Unit Conversion', href: '/admin/unit-conversion', color: 'text-sky-600' },
-        { icon: Truck, label: 'Purchases', href: '/admin/purchases', color: 'text-teal-600' },
-        { icon: Building2, label: 'Suppliers', href: '/admin/suppliers', color: 'text-slate-600' },
-        { icon: Trash, label: 'Wastage', href: '/admin/wastage', color: 'text-red-600' },
-      ],
-    },
-    {
-      label: 'People',
-      tint: 'emerald',
-      items: [
-        { icon: Users, label: 'Employees', href: '/admin/employees', color: 'text-green-600' },
-        { icon: WalletCards, label: 'Salary & Advances', href: '/admin/payroll', color: 'text-emerald-700' },
-        { icon: TrendingUp, label: 'Employee Performance', href: '/admin/employee-performance', color: 'text-lime-600' },
-        { icon: Users, label: 'Customers', href: '/admin/customers', color: 'text-pink-600' },
-      ],
-    },
-    {
       label: 'Finance',
       tint: 'teal',
       items: [
@@ -467,7 +468,6 @@ export default function AdminLayout({ children }) {
         { icon: PiggyBank, label: 'Savings & Deposits', href: '/admin/savings', color: 'text-sky-700' },
         { icon: FolderOpen, label: 'Expense Categories', href: '/admin/expense-categories', color: 'text-emerald-700' },
         { icon: ArrowRightLeft, label: 'Cash Exchange', href: '/admin/cash-exchange', color: 'text-amber-600' },
-        { icon: FileText, label: 'Reports', href: '/admin/reports', color: 'text-purple-600' },
       ],
     },
     {
@@ -484,10 +484,25 @@ export default function AdminLayout({ children }) {
         { icon: Wallet, label: 'Cash Drawer', href: '/admin/cash-drawer', color: 'text-orange-600' },
         { icon: Landmark, label: 'Bank', href: '/admin/bank', color: 'text-teal-600' },
         { icon: CreditCard, label: 'Settlements', href: '/admin/settlements', color: 'text-rose-600' },
-        { icon: Receipt, label: 'Customer Ledger', href: '/admin/accounts-receivable', color: 'text-teal-700' },
-        { icon: Receipt, label: 'Supplier Ledger', href: '/admin/accounts-payable', color: 'text-orange-700' },
         { icon: FileText, label: 'Financial Reports', href: '/admin/financial-reports', color: 'text-indigo-700' },
         { icon: Undo2, label: 'Corrections', href: '/admin/corrections', color: 'text-amber-700' },
+      ],
+    },
+    {
+      // Was "People". Payroll and Staff Performance are the existing screens;
+      // the rest are the HRM module. Staff points at /admin/hrm/staff, which
+      // edits HR facts — accounts, logins and system roles stay under Staff
+      // Permissions, so an HR edit can never grant POS access.
+      label: 'HRM',
+      tint: 'emerald',
+      items: [
+        { icon: Building2, label: 'Departments', href: '/admin/hrm/departments', color: 'text-emerald-700', requiredPermission: 'hrm.departments.view' },
+        { icon: IdCard, label: 'Designations', href: '/admin/hrm/designations', color: 'text-teal-700', requiredPermission: 'hrm.designations.view' },
+        { icon: Users, label: 'Staff', href: '/admin/hrm/staff', color: 'text-green-600', requiredPermission: 'hrm.staff.view' },
+        { icon: CalendarCheck, label: 'Attendance', href: '/admin/hrm/attendance', color: 'text-sky-700', requiredPermission: 'hrm.attendance.view' },
+        { icon: WalletCards, label: 'Payroll', href: '/admin/payroll', color: 'text-emerald-700' },
+        { icon: CalendarDays, label: 'Holidays', href: '/admin/hrm/holidays', color: 'text-violet-700', requiredPermission: 'hrm.holidays.view' },
+        { icon: TrendingUp, label: 'Staff Performance', href: '/admin/employee-performance', color: 'text-lime-600' },
       ],
     },
     { icon: Globe, label: 'Website CMS', href: '/admin/cms', color: 'text-sky-600' },
@@ -495,17 +510,20 @@ export default function AdminLayout({ children }) {
     { icon: Settings, label: 'Settings', href: '/admin/settings', color: 'text-gray-600' },
   ];
 
+  // Mirrors the admin shape: the handful of screens a cashier lives in are
+  // direct links at the top, everything else is grouped below. Same components
+  // as admin throughout — the cashier pages are one-line re-exports — so the
+  // ledgers behave identically on both sides.
   const cashierNavGroups = [
     { icon: Receipt, label: 'POS', href: '/cashier/pos', color: 'text-emerald-700' },
     { icon: LayoutDashboard, label: 'Order Desk', href: '/cashier', color: 'text-gray-700' },
-    {
-      label: 'Ledgers',
-      tint: 'teal',
-      items: [
-        { icon: Receipt, label: 'Customer Ledger', href: '/cashier/accounts-receivable', color: 'text-teal-700' },
-        { icon: Receipt, label: 'Supplier Ledger', href: '/cashier/accounts-payable', color: 'text-orange-700' },
-      ],
-    },
+    { icon: Gauge, label: 'Dashboard', href: '/cashier/dashboard', color: 'text-blue-600' },
+    { icon: FileText, label: 'Reports', href: '/cashier/reports', color: 'text-purple-600' },
+
+    { icon: Users, label: 'Customers', href: '/cashier/customers', color: 'text-pink-600' },
+    { icon: Receipt, label: 'Customer Ledger', href: '/cashier/accounts-receivable', color: 'text-teal-700' },
+    { icon: Receipt, label: 'Supplier Ledger', href: '/cashier/accounts-payable', color: 'text-orange-700' },
+
     {
       label: 'Operations',
       tint: 'amber',
@@ -516,18 +534,17 @@ export default function AdminLayout({ children }) {
         { icon: ReceiptText, label: 'Bills', href: '/cashier/bills', color: 'text-emerald-600' },
         { icon: ChefHat, label: 'KOT History', href: '/cashier/kots', color: 'text-orange-600' },
         { icon: CreditCard, label: 'Payments', href: '/cashier/payment-history', color: 'text-blue-600' },
+        { icon: Bike, label: 'Delivery Executives', href: '/cashier/delivery-executives', color: 'text-orange-700', requiredPermission: 'delivery_executives.view' },
       ],
     },
     {
-      label: 'Records',
+      label: 'Inventory',
       tint: 'indigo',
       items: [
-        { icon: Users, label: 'Customers', href: '/cashier/customers', color: 'text-pink-600' },
-        { icon: Warehouse, label: 'Inventory', href: '/cashier/inventory', color: 'text-indigo-600' },
+        { icon: Warehouse, label: 'All Inventory', href: '/cashier/inventory', color: 'text-indigo-600' },
         { icon: Truck, label: 'Purchases', href: '/cashier/purchases', color: 'text-teal-600', requiredPermission: 'purchases.view' },
         { icon: Building2, label: 'Suppliers', href: '/cashier/suppliers', color: 'text-slate-600', requiredPermission: 'suppliers.view' },
         { icon: Trash, label: 'Wastage', href: '/cashier/wastage', color: 'text-red-600' },
-        { icon: WalletCards, label: 'Salary & Advances', href: '/cashier/payroll', color: 'text-emerald-700', requiredPermission: 'payroll.view' },
       ],
     },
     {
@@ -538,6 +555,13 @@ export default function AdminLayout({ children }) {
         { icon: ArrowRightLeft, label: 'Cash Exchange', href: '/cashier/cash-exchange', color: 'text-amber-600' },
         { icon: Wallet, label: 'Cash Drawer', href: '/cashier/cash-drawer', color: 'text-orange-600' },
         { icon: CalendarClock, label: 'Opening & Closing', href: '/cashier/business-days', color: 'text-gray-700' },
+      ],
+    },
+    {
+      label: 'HRM',
+      tint: 'emerald',
+      items: [
+        { icon: WalletCards, label: 'Salary & Advances', href: '/cashier/payroll', color: 'text-emerald-700', requiredPermission: 'payroll.view' },
       ],
     },
   ];

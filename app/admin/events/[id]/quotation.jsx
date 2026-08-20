@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, Plus, Trash2, X } from 'lucide-react';
 import { apiJson } from '@/lib/authed-fetch';
+import { useConfirm } from '@/components/ui/confirm';
 import { money, errText } from '../event-ui';
 
 const LINE_TYPES = [
@@ -26,8 +27,16 @@ const EMPTY = {
 /**
  * Quotation builder. Prices are resolved server-side and stored as snapshots,
  * so what a client is quoted cannot drift with the restaurant menu.
+ *
+ * Quantity and unit price are edited in place, as the redesign specifies. That
+ * is presentation only — every keystroke still goes through the same PATCH the
+ * old dialog used, so the rules it enforces are untouched: a locked quotation
+ * demands a change reason, and moving a price off its snapshot demands an
+ * override reason and the events.discount permission. Both are asked for and
+ * the edit is retried, rather than the change being silently dropped.
  */
 export default function Quotation({ event, lines, onChanged, addToast }) {
+  const { prompt } = useConfirm();
   const [packages, setPackages] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [recipes, setRecipes] = useState([]);
@@ -55,41 +64,55 @@ export default function Quotation({ event, lines, onChanged, addToast }) {
   const locked = ['CONFIRMED', 'PLANNING', 'FINALIZED', 'IN_PROGRESS'].includes(event.status);
   const closed = ['COMPLETED', 'CANCELLED'].includes(event.status);
 
-  const send = async (fn, successTitle) => {
+  /**
+   * Run a quotation mutation, asking for whichever reason the server demands
+   * and retrying once with it. `build` receives the extra fields to merge into
+   * its request body.
+   */
+  const send = async (build, successTitle, extra = {}) => {
     setBusy(true);
     try {
-      const res = await fn();
+      const res = await build(extra);
       addToast({ type: 'success', title: successTitle || res.message });
       setForm(null);
-      onChanged();
+      await onChanged();
+      return true;
     } catch (e) {
-      // A locked quotation can still be changed with a stated reason.
-      if (e.code === 'quote_locked') {
-        const reason = window.prompt(
-          `${event.event_number} is ${event.status} and its quotation is locked.\n\nWhy is it being changed? (recorded in the audit trail)`
-        );
-        if (reason && reason.trim()) {
-          setBusy(false);
-          return send(() => fn(reason.trim()), successTitle);
-        }
-      } else if (e.code === 'override_reason_required') {
-        addToast({
-          type: 'error',
-          title: 'A reason is required',
-          description: e.standard_price != null
-            ? `The standard price is ${money(e.standard_price)}. Enter a reason to charge something else.`
-            : e.error,
+      if (e.code === 'quote_locked' && !extra.change_reason) {
+        const reason = await prompt({
+          title: `${event.event_number} is ${event.status.replace('_', ' ').toLowerCase()}`,
+          message: 'Its quotation is locked. Why is it being changed? This is recorded in the audit trail.',
+          label: 'Reason',
+          required: true,
         });
+        if (reason?.trim()) {
+          setBusy(false);
+          return send(build, successTitle, { ...extra, change_reason: reason.trim() });
+        }
+      } else if (e.code === 'override_reason_required' && !extra.override_reason) {
+        const reason = await prompt({
+          title: 'Charging a different price',
+          message: e.standard_price != null
+            ? `The standard price is ${money(e.standard_price)}. Why is this line priced differently?`
+            : 'Why is this line priced differently? This is recorded in the audit trail.',
+          label: 'Reason',
+          required: true,
+        });
+        if (reason?.trim()) {
+          setBusy(false);
+          return send(build, successTitle, { ...extra, override_reason: reason.trim() });
+        }
       } else {
         addToast({ type: 'error', title: 'Could not update the quotation', description: errText(e) });
       }
+      return false;
     } finally {
       setBusy(false);
     }
   };
 
-  const addLine = (changeReason) => send(
-    () => apiJson(`/api/admin/events/${event.id}/lines`, {
+  const addLine = () => send(
+    (extra) => apiJson(`/api/admin/events/${event.id}/lines`, {
       method: 'POST',
       body: JSON.stringify({
         ...form,
@@ -98,239 +121,365 @@ export default function Quotation({ event, lines, onChanged, addToast }) {
         recipe_id: form.recipe_id || null,
         quantity: Number(form.quantity),
         unit_price: form.unit_price === '' ? undefined : Number(form.unit_price),
-        change_reason: changeReason,
+        ...extra,
       }),
     }),
     'Line added'
   );
 
   const removeLine = (line) => send(
-    (changeReason) => apiJson(`/api/admin/events/${event.id}/lines/${line.id}`, {
+    (extra) => apiJson(`/api/admin/events/${event.id}/lines/${line.id}`, {
       method: 'DELETE',
-      body: JSON.stringify({ change_reason: changeReason }),
+      body: JSON.stringify(extra),
     }),
     'Line removed'
   );
 
+  const updateLine = (line, patch) => send(
+    (extra) => apiJson(`/api/admin/events/${event.id}/lines/${line.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ ...patch, ...extra }),
+    }),
+    'Line updated'
+  );
+
   const saveCharges = () => send(
-    (changeReason) => apiJson(`/api/admin/events/${event.id}/charges`, {
+    (extra) => apiJson(`/api/admin/events/${event.id}/charges`, {
       method: 'PATCH',
       body: JSON.stringify({
         ...charges,
         discount_amount: Number(charges.discount_amount || 0),
         tax_percent: Number(charges.tax_percent || 0),
         service_charge_percent: Number(charges.service_charge_percent || 0),
-        change_reason: changeReason,
+        ...extra,
       }),
     }),
     'Charges updated'
   );
 
   return (
-    <section className="border border-gray-200 bg-white">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-3">
+    <section className="panel">
+      <div className="panel-head">
         <div>
-          <h2 className="text-sm font-bold text-gray-900">Quotation</h2>
-          <p className="text-xs text-gray-500">
-            Prices are snapshots taken when each line is added — later menu changes cannot move them.
-          </p>
+          <h2 className="panel-title">Quotation</h2>
+          <p className="panel-sub">Prices are snapshots taken when each line is added.</p>
         </div>
         {!closed && (
-          <button onClick={() => setForm({ ...EMPTY })} className={SMALL}><Plus className="h-3.5 w-3.5" />Add line</button>
+          <button type="button" onClick={() => setForm({ ...EMPTY })} className="btn btn-secondary btn-sm">
+            <Plus size={14} />Add line
+          </button>
         )}
       </div>
 
       {locked && (
-        <div className="flex items-start gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>This event is {event.status}. Changing the quotation asks for a reason and is recorded.</span>
+        <div className="note" style={{ border: 0, borderBottom: '1px solid var(--color-divider)' }}>
+          <AlertTriangle size={16} />
+          <p style={{ margin: 0 }}>
+            This event is {event.status.replace('_', ' ').toLowerCase()}. Changing the quotation asks
+            for a reason and is recorded.
+          </p>
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+      <div style={{ overflowX: 'auto' }}>
+        <table className="table">
+          <thead>
             <tr>
-              <th className="px-4 py-2 font-semibold">Item</th>
-              <th className="px-4 py-2 text-right font-semibold">Qty</th>
-              <th className="px-4 py-2 text-right font-semibold">Unit</th>
-              <th className="px-4 py-2 text-right font-semibold">Amount</th>
-              <th className="px-2 py-2" />
+              <th>Item</th>
+              <th className="num" style={{ width: 88 }}>Qty</th>
+              <th className="num" style={{ width: 120 }}>Unit</th>
+              <th className="num" style={{ width: 120 }}>Amount</th>
+              <th style={{ width: 40 }} />
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody>
             {lines.map((l) => (
-              <tr key={l.id}>
-                <td className="px-4 py-2">
-                  <span className="font-medium text-gray-900">{l.item_name}</span>
-                  {l.is_complimentary === 1 && <span className="ml-2 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">FREE</span>}
-                  <span className="block text-xs text-gray-500">
-                    {LINE_TYPES.find(([v]) => v === l.line_type)?.[1] || l.line_type}
-                    {l.description ? ` · ${l.description}` : ''}
-                  </span>
-                  {l.price_overridden === 1 && (
-                    <span className="mt-0.5 block text-xs text-amber-700">
-                      Price overridden{l.list_price != null ? ` from ${money(l.list_price)}` : ''}
-                      {l.override_reason ? ` — “${l.override_reason}”` : ''}
-                      {l.overridden_by_name ? ` (${l.overridden_by_name})` : ''}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-2 text-right tabular-nums">{Number(l.quantity)}</td>
-                <td className="px-4 py-2 text-right tabular-nums">
-                  {money(l.unit_price)}
-                  {l.list_price != null && Number(l.list_price) !== Number(l.unit_price) && (
-                    <span className="block text-xs text-gray-400 line-through">{money(l.list_price)}</span>
-                  )}
-                </td>
-                <td className="px-4 py-2 text-right font-semibold tabular-nums">{money(l.line_total)}</td>
-                <td className="px-2 py-2">
-                  {!closed && (
-                    <button onClick={() => removeLine(l)} className={ICON} aria-label="Remove line">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </td>
-              </tr>
+              <LineRow
+                /* The server's figures are baked into the key, so a line that
+                   comes back changed remounts with them instead of an effect
+                   syncing prop into state behind the user's back. */
+                key={`${l.id}:${l.quantity}:${l.unit_price}`}
+                line={l}
+                closed={closed}
+                busy={busy}
+                onCommit={(patch) => updateLine(l, patch)}
+                onRemove={() => removeLine(l)}
+              />
             ))}
           </tbody>
         </table>
-        {!lines.length && <p className="py-10 text-center text-sm text-gray-500">No lines yet. Add a package or a charge.</p>}
+        {!lines.length && (
+          <p style={{ padding: '40px 16px', textAlign: 'center', fontSize: 13, color: 'var(--color-neutral-600)', margin: 0 }}>
+            No lines yet. Add a package or a charge.
+          </p>
+        )}
       </div>
 
-      <div className="grid gap-4 border-t border-gray-200 p-4 lg:grid-cols-2">
-        <div className="space-y-2">
-          <h3 className="text-xs font-bold uppercase text-gray-500">Charges</h3>
-          <div className="grid grid-cols-2 gap-2">
-            <L label="Discount (Rs)">
-              <input type="number" min="0" step="0.01" value={charges.discount_amount}
-                onChange={(e) => setCharges({ ...charges, discount_amount: e.target.value })} className={INPUT} />
-            </L>
-            <L label="Discount reason">
-              <input value={charges.discount_reason || ''}
-                onChange={(e) => setCharges({ ...charges, discount_reason: e.target.value })} className={INPUT} />
-            </L>
-            <L label="Service charge %">
-              <input type="number" min="0" step="0.1" value={charges.service_charge_percent}
-                onChange={(e) => setCharges({ ...charges, service_charge_percent: e.target.value })} className={INPUT} />
-            </L>
-            <L label="VAT / tax %">
-              <input type="number" min="0" step="0.1" value={charges.tax_percent}
-                onChange={(e) => setCharges({ ...charges, tax_percent: e.target.value })} className={INPUT} />
-            </L>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: '1px solid var(--color-divider)' }}>
+        <div style={{ padding: 16, borderRight: '1px solid var(--color-divider)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--color-neutral-600)' }}>
+            Charges
+          </p>
+          <label style={{ display: 'block' }}>
+            <span className="field-label">Discount (Rs)</span>
+            <input
+              className="input" type="number" min="0" step="0.01" disabled={closed}
+              value={charges.discount_amount}
+              onChange={(e) => setCharges({ ...charges, discount_amount: e.target.value })}
+            />
+          </label>
+          <label style={{ display: 'block' }}>
+            <span className="field-label">Discount reason</span>
+            <input
+              className="input" disabled={closed} value={charges.discount_reason || ''}
+              onChange={(e) => setCharges({ ...charges, discount_reason: e.target.value })}
+            />
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <label style={{ display: 'block' }}>
+              <span className="field-label">Service charge %</span>
+              <input
+                className="input" type="number" min="0" step="0.1" disabled={closed}
+                value={charges.service_charge_percent}
+                onChange={(e) => setCharges({ ...charges, service_charge_percent: e.target.value })}
+              />
+            </label>
+            <label style={{ display: 'block' }}>
+              <span className="field-label">VAT %</span>
+              <input
+                className="input" type="number" min="0" step="0.1" disabled={closed}
+                value={charges.tax_percent}
+                onChange={(e) => setCharges({ ...charges, tax_percent: e.target.value })}
+              />
+            </label>
           </div>
-          {!closed && <button onClick={saveCharges} disabled={busy} className={SMALL}>Save charges</button>}
+          {!closed && (
+            <button type="button" onClick={saveCharges} disabled={busy} className="btn btn-secondary btn-sm" style={{ alignSelf: 'flex-start' }}>
+              Save charges
+            </button>
+          )}
         </div>
 
-        <dl className="space-y-1 text-sm">
-          <Total label="Subtotal" value={money(event.subtotal)} />
-          <Total label="Discount" value={`− ${money(event.discount_amount)}`} />
-          <Total label={`Service charge (${Number(event.service_charge_percent || 0)}%)`} value={money(event.service_charge_amount)} />
-          <Total label={`VAT (${Number(event.tax_percent || 0)}%)`} value={money(event.tax_amount)} />
-          <Total label="Total" value={money(event.total_amount)} strong />
-          <Total label="Deposits received" value={`− ${money(event.deposit_total)}`} />
-          <Total label="Outstanding" value={money(event.outstanding_amount)} strong />
-        </dl>
+        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14 }}>
+          <TotalRow label="Subtotal" value={money(event.subtotal)} />
+          <TotalRow label="Discount" value={`− ${money(event.discount_amount)}`} />
+          <TotalRow label={`Service charge (${Number(event.service_charge_percent || 0)}%)`} value={money(event.service_charge_amount)} />
+          <TotalRow label={`VAT (${Number(event.tax_percent || 0)}%)`} value={money(event.tax_amount)} />
+          <div
+            style={{
+              display: 'flex', justifyContent: 'space-between',
+              borderTop: '1px solid var(--color-divider)', paddingTop: 8, marginTop: 2,
+              fontWeight: 800, fontSize: 15,
+            }}
+          >
+            <span>Total</span>
+            <span className="num">{money(event.total_amount)}</span>
+          </div>
+        </div>
       </div>
 
       {form && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4">
-          <div className="my-8 w-full max-w-2xl border border-gray-200 bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-              <h2 className="font-bold text-gray-900">Add a quotation line</h2>
-              <button onClick={() => setForm(null)} className={ICON}><X className="h-4 w-4" /></button>
-            </div>
-            <div className="grid gap-4 p-5 sm:grid-cols-2">
-              <L label="Line type" wide>
-                <select value={form.line_type} onChange={(e) => setForm({ ...EMPTY, line_type: e.target.value })} className={INPUT}>
-                  {LINE_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
-              </L>
-
-              {form.line_type === 'package' && (
-                <L label="Package" wide hint="Quantity is the number of guests taking this package">
-                  <select value={form.package_id} onChange={(e) => setForm({ ...form, package_id: e.target.value })} className={INPUT}>
-                    <option value="">Choose a package</option>
-                    {packages.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                </L>
-              )}
-
-              {(form.line_type === 'menu_item' || form.line_type === 'beverage') && (
-                <L label="Menu item" wide>
-                  <select value={form.menu_item_id} onChange={(e) => setForm({ ...form, menu_item_id: e.target.value })} className={INPUT}>
-                    <option value="">Not linked (enter a name below)</option>
-                    {menuItems.map((m) => <option key={m.id} value={m.id}>{m.name} — {money(m.base_price)}</option>)}
-                  </select>
-                </L>
-              )}
-
-              {form.line_type === 'custom_food' && (
-                <>
-                  <L label="Recipe" hint="Links food cost to the BOM">
-                    <select value={form.recipe_id} onChange={(e) => setForm({ ...form, recipe_id: e.target.value })} className={INPUT}>
-                      <option value="">No recipe</option>
-                      {recipes.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                    </select>
-                  </L>
-                  <label className="flex items-end gap-2 text-sm text-gray-700">
-                    <input type="checkbox" checked={form.consumes_inventory}
-                      onChange={(e) => setForm({ ...form, consumes_inventory: e.target.checked })} className="mb-3 h-4 w-4" />
-                    <span className="mb-2">Uses inventory</span>
-                  </label>
-                </>
-              )}
-
-              <L label="Name" wide hint={form.line_type === 'package' ? 'Defaults to the package name' : undefined}>
-                <input value={form.item_name} onChange={(e) => setForm({ ...form, item_name: e.target.value })} className={INPUT} />
-              </L>
-              <L label="Quantity">
-                <input type="number" min="0.01" step="1" value={form.quantity}
-                  onChange={(e) => setForm({ ...form, quantity: e.target.value })} className={INPUT} />
-              </L>
-              <L label="Unit price" hint="Leave blank to use the standard price">
-                <input type="number" min="0" step="0.01" value={form.unit_price}
-                  onChange={(e) => setForm({ ...form, unit_price: e.target.value })} className={INPUT} />
-              </L>
-              <L label="Reason for a different price" wide hint="Required when charging other than the standard price">
-                <input value={form.override_reason} onChange={(e) => setForm({ ...form, override_reason: e.target.value })} className={INPUT} />
-              </L>
-              <L label="Description / note" wide>
-                <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={INPUT} />
-              </L>
-            </div>
-            <div className="flex justify-end gap-2 border-t border-gray-200 px-5 py-4">
-              <button onClick={() => setForm(null)} className={BTN}>Cancel</button>
-              <button onClick={() => addLine()} disabled={busy} className={PRIMARY}>{busy ? 'Adding…' : 'Add line'}</button>
-            </div>
-          </div>
-        </div>
+        <AddLineDialog
+          form={form} setForm={setForm} busy={busy} onAdd={addLine}
+          packages={packages} menuItems={menuItems} recipes={recipes}
+        />
       )}
     </section>
   );
 }
 
-function Total({ label, value, strong }) {
+/**
+ * One quotation line. Its inputs are uncontrolled between commits: the row
+ * holds the typed text locally and only PATCHes on blur or Enter, so a
+ * half-typed "12" on the way to "120" never reaches the server.
+ */
+function LineRow({ line, closed, busy, onCommit, onRemove }) {
+  // Seeded from the line and owned by the row until it commits. The parent
+  // remounts this component whenever the server's figures move, so there is
+  // nothing to re-sync.
+  const [qty, setQty] = useState(String(Number(line.quantity)));
+  const [unit, setUnit] = useState(String(Number(line.unit_price)));
+
+  const commitQty = async () => {
+    const next = Number(qty);
+    if (!Number.isFinite(next) || next <= 0 || next === Number(line.quantity)) {
+      setQty(String(Number(line.quantity)));
+      return;
+    }
+    const ok = await onCommit({ quantity: next });
+    if (!ok) setQty(String(Number(line.quantity)));
+  };
+
+  const commitUnit = async () => {
+    const next = Number(unit);
+    if (!Number.isFinite(next) || next < 0 || next === Number(line.unit_price)) {
+      setUnit(String(Number(line.unit_price)));
+      return;
+    }
+    const ok = await onCommit({ unit_price: next });
+    if (!ok) setUnit(String(Number(line.unit_price)));
+  };
+
+  // Enter commits by blurring (the blur handler owns the PATCH); Escape puts
+  // the stored figures back and gets out of the way.
+  const onKey = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
+    if (e.key === 'Escape') {
+      setQty(String(Number(line.quantity)));
+      setUnit(String(Number(line.unit_price)));
+      e.currentTarget.blur();
+    }
+  };
+
   return (
-    <div className={`flex justify-between gap-4 ${strong ? 'border-t border-gray-200 pt-1' : ''}`}>
-      <dt className={strong ? 'font-bold text-gray-900' : 'text-gray-500'}>{label}</dt>
-      <dd className={`tabular-nums ${strong ? 'font-bold text-gray-900' : 'text-gray-800'}`}>{value}</dd>
+    <tr>
+      <td style={{ padding: 8 }}>
+        <div style={{ fontWeight: 600, fontSize: 14 }}>
+          {line.item_name}
+          {line.is_complimentary === 1 && (
+            <span className="tag-neutral" style={{ marginLeft: 8 }}>FREE</span>
+          )}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--color-neutral-600)' }}>
+          {LINE_TYPES.find(([v]) => v === line.line_type)?.[1] || line.line_type}
+          {line.description ? ` · ${line.description}` : ''}
+        </div>
+        {line.price_overridden === 1 && (
+          <div style={{ fontSize: 12, color: 'var(--color-due)' }}>
+            Price overridden{line.list_price != null ? ` from ${money(line.list_price)}` : ''}
+            {line.override_reason ? ` — “${line.override_reason}”` : ''}
+            {line.overridden_by_name ? ` (${line.overridden_by_name})` : ''}
+          </div>
+        )}
+      </td>
+      <td style={{ padding: 8 }}>
+        <input
+          className="lineinput" type="number" min="0" step="1" disabled={closed || busy}
+          value={qty} onChange={(e) => setQty(e.target.value)}
+          onBlur={commitQty} onKeyDown={onKey}
+          aria-label={`Quantity for ${line.item_name}`}
+        />
+      </td>
+      <td style={{ padding: 8 }}>
+        <input
+          className="lineinput" type="number" min="0" step="0.01" disabled={closed || busy}
+          value={unit} onChange={(e) => setUnit(e.target.value)}
+          onBlur={commitUnit} onKeyDown={onKey}
+          aria-label={`Unit price for ${line.item_name}`}
+        />
+      </td>
+      <td className="num" style={{ padding: 8, fontWeight: 700 }}>{money(line.line_total)}</td>
+      <td style={{ padding: 8, textAlign: 'center' }}>
+        {!closed && (
+          <button type="button" onClick={onRemove} disabled={busy} className="btn-square" title="Remove" aria-label={`Remove ${line.item_name}`}>
+            <Trash2 size={14} />
+          </button>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+function AddLineDialog({ form, setForm, busy, onAdd, packages, menuItems, recipes }) {
+  return (
+    <div className="evx-backdrop">
+      <div className="evx-dialog evx-dialog-wide" style={{ margin: '32px 0' }}>
+        <div className="evx-dialog-head">
+          <h2 style={{ margin: 0, fontSize: 18 }}>Add a quotation line</h2>
+          <button type="button" onClick={() => setForm(null)} className="btn-square btn-square-lg" aria-label="Close">
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="form-grid">
+          <Field label="Line type" wide>
+            <select value={form.line_type} onChange={(e) => setForm({ ...EMPTY, line_type: e.target.value })} className="input">
+              {LINE_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </Field>
+
+          {form.line_type === 'package' && (
+            <Field label="Package" wide hint="Quantity is the number of guests taking this package">
+              <select value={form.package_id} onChange={(e) => setForm({ ...form, package_id: e.target.value })} className="input">
+                <option value="">Choose a package</option>
+                {packages.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </Field>
+          )}
+
+          {(form.line_type === 'menu_item' || form.line_type === 'beverage') && (
+            <Field label="Menu item" wide>
+              <select value={form.menu_item_id} onChange={(e) => setForm({ ...form, menu_item_id: e.target.value })} className="input">
+                <option value="">Not linked (enter a name below)</option>
+                {menuItems.map((m) => <option key={m.id} value={m.id}>{m.name} — {money(m.base_price)}</option>)}
+              </select>
+            </Field>
+          )}
+
+          {form.line_type === 'custom_food' && (
+            <>
+              <Field label="Recipe" hint="Links food cost to the BOM">
+                <select value={form.recipe_id} onChange={(e) => setForm({ ...form, recipe_id: e.target.value })} className="input">
+                  <option value="">No recipe</option>
+                  {recipes.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+              </Field>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, alignSelf: 'end', paddingBottom: 8, fontSize: 14 }}>
+                <input
+                  type="checkbox" checked={form.consumes_inventory}
+                  onChange={(e) => setForm({ ...form, consumes_inventory: e.target.checked })}
+                  style={{ width: 16, height: 16 }}
+                />
+                Uses inventory
+              </label>
+            </>
+          )}
+
+          <Field label="Name" wide hint={form.line_type === 'package' ? 'Defaults to the package name' : undefined}>
+            <input value={form.item_name} onChange={(e) => setForm({ ...form, item_name: e.target.value })} className="input" />
+          </Field>
+          <Field label="Quantity">
+            <input type="number" min="0.01" step="1" value={form.quantity}
+              onChange={(e) => setForm({ ...form, quantity: e.target.value })} className="input" />
+          </Field>
+          <Field label="Unit price" hint="Leave blank to use the standard price">
+            <input type="number" min="0" step="0.01" value={form.unit_price}
+              onChange={(e) => setForm({ ...form, unit_price: e.target.value })} className="input" />
+          </Field>
+          <Field label="Reason for a different price" wide hint="Required when charging other than the standard price">
+            <input value={form.override_reason} onChange={(e) => setForm({ ...form, override_reason: e.target.value })} className="input" />
+          </Field>
+          <Field label="Description / note" wide>
+            <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input" />
+          </Field>
+        </div>
+
+        <div className="evx-dialog-foot">
+          <button type="button" onClick={() => setForm(null)} className="btn btn-secondary">Cancel</button>
+          <button type="button" onClick={onAdd} disabled={busy} className="btn btn-primary">
+            {busy ? 'Adding…' : 'Add line'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
-function L({ label, hint, wide, children }) {
+function TotalRow({ label, value }) {
   return (
-    <label className={`text-xs font-medium text-gray-600 ${wide ? 'sm:col-span-2' : ''}`}>
-      {label}
-      <div className="mt-1">{children}</div>
-      {hint && <p className="mt-0.5 text-[11px] font-normal text-gray-400">{hint}</p>}
-    </label>
+    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+      <span style={{ color: 'var(--color-neutral-600)' }}>{label}</span>
+      <span className="num">{value}</span>
+    </div>
   );
 }
 
-const BTN = 'inline-flex h-10 items-center justify-center gap-2 border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50';
-const PRIMARY = 'inline-flex h-10 items-center justify-center gap-2 border border-gray-950 bg-gray-950 px-4 text-sm font-semibold text-white hover:bg-black disabled:opacity-50 [color:#fff!important]';
-const SMALL = 'inline-flex h-8 items-center gap-1 border border-gray-300 bg-white px-2.5 text-xs font-medium text-gray-700 hover:bg-gray-50';
-const ICON = 'inline-flex h-8 w-8 items-center justify-center border border-gray-300 text-gray-600 hover:bg-gray-50';
-const INPUT = 'h-10 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900';
+function Field({ label, hint, wide, children }) {
+  return (
+    <label style={{ display: 'block' }} className={wide ? 'wide' : undefined}>
+      <span className="field-label">{label}</span>
+      {children}
+      {hint && <span className="field-hint">{hint}</span>}
+    </label>
+  );
+}

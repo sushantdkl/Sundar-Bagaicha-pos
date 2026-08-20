@@ -190,6 +190,11 @@ export default function AdminPos() {
   const [customerSelection, setCustomerSelection] = useState(emptyCustomerSelection);
   const [deliveryAtCheckout, setDeliveryAtCheckout] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState('');
+  // Optional rider for a takeaway being sent out. Loaded once; an empty list
+  // simply hides the picker, so a venue that does not use executives sees no
+  // change to checkout.
+  const [deliveryExecutives, setDeliveryExecutives] = useState([]);
+  const [deliveryExecutiveId, setDeliveryExecutiveId] = useState('');
 
   const kotKeyRef = useRef(null);
   const payKeyRef = useRef(null);
@@ -280,6 +285,15 @@ export default function AdminPos() {
     } catch (e) { notify(e.message, 'error'); }
   }, [notify]);
 
+  // A cashier without delivery_executives.view just gets an empty list and no
+  // picker; checkout is unaffected either way.
+  const fetchDeliveryExecutives = useCallback(async () => {
+    try {
+      const data = await api('/api/admin/delivery-executives');
+      setDeliveryExecutives(data.executives || []);
+    } catch { /* picker stays hidden */ }
+  }, []);
+
   const fetchSettings = useCallback(async () => {
     try {
       const data = await api('/api/admin/settings');
@@ -309,11 +323,12 @@ export default function AdminPos() {
     fetchProducts();
     fetchCategories();
     fetchSettings();
+    fetchDeliveryExecutives();
     loadTables();
     const onFocus = () => fetchSettings();
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
-  }, [fetchProducts, fetchCategories, fetchSettings, loadTables]);
+  }, [fetchProducts, fetchCategories, fetchSettings, fetchDeliveryExecutives, loadTables]);
 
   const refreshWorkspace = useCallback(async (id) => {
     const data = await api(`/api/admin/pos/orders/${id}`);
@@ -449,6 +464,7 @@ export default function AdminPos() {
     const existingDelivery = String(workspace?.order?.order_type || '').toLowerCase() === 'delivery';
     setDeliveryAtCheckout(existingDelivery);
     setDeliveryFee(existingDelivery ? String(Number(workspace?.order?.delivery_fee || 0)) : '');
+    setDeliveryExecutiveId(workspace?.order?.delivery_executive_id ? String(workspace.order.delivery_executive_id) : '');
   // The order id, not every workspace refresh, establishes checkout mode.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
@@ -917,6 +933,7 @@ export default function AdminPos() {
           customer_address: customerCheck.address || customerSelection.address || '',
           delivery: deliveryAtCheckout,
           delivery_fee: deliveryAtCheckout ? billTotals.deliveryFee : 0,
+          delivery_executive_id: deliveryAtCheckout && deliveryExecutiveId ? Number(deliveryExecutiveId) : null,
         }),
       });
       printFinalBill(data.receipt, { size: paperSize });
@@ -926,7 +943,7 @@ export default function AdminPos() {
       await loadTables();
     } catch (e) { notify(e.message, 'error'); }
     finally { setBusy(false); }
-  }, [orderId, busy, allLines.length, unsentLines.length, notify, customerSelection, resetToNewSale, paperSize, workspace, loadTables, showSuccessFlash, buildAllocations, getTotals, deliveryAtCheckout]);
+  }, [orderId, busy, allLines.length, unsentLines.length, notify, customerSelection, resetToNewSale, paperSize, workspace, loadTables, showSuccessFlash, buildAllocations, getTotals, deliveryAtCheckout, deliveryExecutiveId]);
 
   const selectTable = useCallback(async (table) => {
     if (changeTableMode && orderId) {
@@ -1804,6 +1821,9 @@ export default function AdminPos() {
           }
         }}
         deliveryFee={deliveryFee}
+        deliveryExecutives={deliveryExecutives}
+        deliveryExecutiveId={deliveryExecutiveId}
+        onDeliveryExecutiveChange={setDeliveryExecutiveId}
         onDeliveryFeeChange={setDeliveryFee}
       />
     </div>

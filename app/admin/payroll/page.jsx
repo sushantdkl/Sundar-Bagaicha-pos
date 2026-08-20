@@ -58,8 +58,9 @@ export default function PayrollPage() {
     advanced: result.advanced + Number(employee.total_advanced || 0),
     deducted: result.deducted + Number(employee.total_deducted || 0),
     outstanding: result.outstanding + Number(employee.advance_outstanding || 0),
+    salaryPaid: result.salaryPaid + Number(employee.total_salary_recorded || 0),
     staffWithBalance: result.staffWithBalance + (Number(employee.advance_outstanding || 0) > 0 ? 1 : 0),
-  }), { advanced: 0, deducted: 0, outstanding: 0, staffWithBalance: 0 }), [data.employees]);
+  }), { advanced: 0, deducted: 0, outstanding: 0, salaryPaid: 0, staffWithBalance: 0 }), [data.employees]);
 
   const exportAdvances = () => {
     const headers = ['Employee', 'Advance Date', 'Amount', 'Method', 'Given By', 'Note'];
@@ -99,6 +100,7 @@ export default function PayrollPage() {
 
       <main className="space-y-5 bg-gray-50 p-4 sm:p-6 lg:p-8">
         <KpiCards kpis={[
+          { key: 'salary', label: 'Salary paid', value: totals.salaryPaid, format: 'currency', icon: 'positive' },
           { key: 'advanced', label: 'Total advanced', value: totals.advanced, format: 'currency', icon: 'wallet' },
           { key: 'deducted', label: 'Recovered in payroll', value: totals.deducted, format: 'currency', icon: 'positive' },
           { key: 'outstanding', label: 'Outstanding', value: totals.outstanding, format: 'currency', icon: 'warn' },
@@ -117,7 +119,7 @@ export default function PayrollPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-sm">
+            <table className="w-full min-w-[940px] text-sm">
               <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Employee</th>
@@ -125,6 +127,7 @@ export default function PayrollPage() {
                   <th className="px-5 py-3 text-right font-semibold">Total advanced</th>
                   <th className="px-5 py-3 text-right font-semibold">Deducted</th>
                   <th className="px-5 py-3 text-right font-semibold">Outstanding</th>
+                  <th className="px-5 py-3 text-right font-semibold">Salary paid</th>
                   <th className="px-5 py-3 text-right font-semibold">Action</th>
                 </tr>
               </thead>
@@ -136,10 +139,27 @@ export default function PayrollPage() {
                     <td className="px-5 py-3 text-right tabular-nums">{money(employee.total_advanced)}</td>
                     <td className="px-5 py-3 text-right tabular-nums text-emerald-700">{money(employee.total_deducted)}</td>
                     <td className={`px-5 py-3 text-right font-semibold tabular-nums ${Number(employee.advance_outstanding) > 0 ? 'text-amber-700' : 'text-gray-400'}`}>{money(employee.advance_outstanding)}</td>
+                    {/* Already computed by listPayrollEmployees as
+                        total_salary_recorded; it was only ever visible inside
+                        the drawer, so the list looked like nobody had been paid. */}
+                    <td className="px-5 py-3 text-right tabular-nums">
+                      {Number(employee.total_salary_recorded) > 0 ? (
+                        <>
+                          <span className="font-semibold text-gray-900">{money(employee.total_salary_recorded)}</span>
+                          {employee.last_paid_on && (
+                            <span className="block text-xs text-gray-500">
+                              last {String(employee.last_paid_on).slice(0, 10)}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-gray-400">Rs 0</span>
+                      )}
+                    </td>
                     <td className="px-5 py-3 text-right"><button type="button" onClick={() => setSelected(employee)} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 active:scale-[0.98]">{canGiveAdvance ? <BanknoteArrowDown className="h-3.5 w-3.5" /> : <WalletCards className="h-3.5 w-3.5" />}{isCashier ? (canGiveAdvance ? 'View / advance' : 'View') : 'Manage'}</button></td>
                   </tr>
                 ))}
-                {!loading && rows.length === 0 && <tr><td colSpan={6} className="px-5 py-12 text-center text-gray-500">No employees match these filters.</td></tr>}
+                {!loading && rows.length === 0 && <tr><td colSpan={7} className="px-5 py-12 text-center text-gray-500">No employees match these filters.</td></tr>}
               </tbody>
             </table>
           </div>

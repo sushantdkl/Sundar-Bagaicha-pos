@@ -14,11 +14,14 @@ import {
   isTerminal,
 } from '../../lib/events/constants.js';
 
-test('the happy path walks the full lifecycle', () => {
+test('the happy path walks the full lifecycle up to the point of billing', () => {
+  // COMPLETED is deliberately absent: an event is completed by settling it
+  // (lib/events/billing.js), never by choosing the status. See the dedicated
+  // test below and tests/unit/event-integration.test.js.
   const path = [
     EVENT_STATUS.INQUIRY, EVENT_STATUS.DRAFT, EVENT_STATUS.QUOTED,
     EVENT_STATUS.CONFIRMED, EVENT_STATUS.PLANNING, EVENT_STATUS.FINALIZED,
-    EVENT_STATUS.IN_PROGRESS, EVENT_STATUS.COMPLETED,
+    EVENT_STATUS.IN_PROGRESS,
   ];
   for (let i = 0; i < path.length - 1; i++) {
     assert.equal(canTransition(path[i], path[i + 1]), true, `${path[i]} -> ${path[i + 1]}`);
@@ -40,8 +43,11 @@ test('a started event cannot be un-started or skipped ahead', () => {
   // Production has been released; going back would desync stock and KOTs.
   assert.equal(canTransition(EVENT_STATUS.IN_PROGRESS, EVENT_STATUS.FINALIZED), false);
   assert.equal(canTransition(EVENT_STATUS.IN_PROGRESS, EVENT_STATUS.PLANNING), false);
-  // Cannot jump straight from an inquiry to a running event.
+  // A booking must be committed before it can run. Confirming is now enough —
+  // Planning and Finalized are optional — but an inquiry still cannot start.
   assert.equal(canTransition(EVENT_STATUS.INQUIRY, EVENT_STATUS.IN_PROGRESS), false);
+  assert.equal(canTransition(EVENT_STATUS.QUOTED, EVENT_STATUS.IN_PROGRESS), false);
+  assert.equal(canTransition(EVENT_STATUS.CONFIRMED, EVENT_STATUS.IN_PROGRESS), true);
   assert.equal(canTransition(EVENT_STATUS.QUOTED, EVENT_STATUS.COMPLETED), false);
 });
 
@@ -56,9 +62,17 @@ test('assertTransition throws a 4xx with a readable message', () => {
     () => assertTransition(EVENT_STATUS.COMPLETED, EVENT_STATUS.IN_PROGRESS),
     (err) => err.status === 409 && /no longer change status/i.test(err.message)
   );
+  // Completing is refused with advice rather than a matrix dump, because the
+  // operator's next step differs by status: confirm first, or bill.
   assert.throws(
     () => assertTransition(EVENT_STATUS.INQUIRY, EVENT_STATUS.COMPLETED),
-    (err) => err.status === 409 && /cannot move from INQUIRY to COMPLETED/i.test(err.message)
+    (err) => err.status === 409 && err.code === 'complete_requires_billing'
+      && /confirm it first, then bill it/i.test(err.message)
+  );
+  assert.throws(
+    () => assertTransition(EVENT_STATUS.CONFIRMED, EVENT_STATUS.COMPLETED),
+    (err) => err.status === 409 && err.code === 'complete_requires_billing'
+      && /Bill the event to complete it/i.test(err.message)
   );
   assert.throws(
     () => assertTransition(EVENT_STATUS.DRAFT, 'NOT_A_STATUS'),

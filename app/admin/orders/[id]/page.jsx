@@ -12,6 +12,7 @@ import { formatNepalDateTime } from '@/lib/report-dates.js';
 import { compactBillNumber, compactOrderNumber } from '@/lib/document-display.js';
 import { latestReopenChanges, buildChangeIndex } from '@/lib/reopen-diff.js';
 import { useToast } from '@/components/ui/toast';
+import AssignDelivery from './assign-delivery';
 import { useConfirm } from '@/components/ui/confirm';
 import { printFinalBill } from '@/lib/pos-print.js';
 import { receiptFromOrderDetail } from '@/lib/bill-receipt.js';
@@ -435,6 +436,10 @@ export default function OrderView() {
           </div>
 
           <div className="space-y-6">
+            {/* Delivery orders only — attribution, not a change to the sale. */}
+            {String(order.order_type || '').toLowerCase() === 'delivery' && (
+              <AssignDelivery order={order} onAssigned={fetchOrderDetails} />
+            )}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Order Details</h3>
               <div className="space-y-3">

@@ -27,7 +27,11 @@ function n(v) {
 
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin'] });
+    // A cashier runs the counter and needs today's numbers. The margin
+    // estimate is withheld from them below — everything else here is
+    // operational data they already act on.
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'] });
+    const isAdmin = auth.user?.role === 'admin';
     if (auth.error) return auth.error;
 
     const db = Database.getInstance();
@@ -66,6 +70,7 @@ export async function GET(request) {
       todayOrdersRow,
       yesterdayOrdersRow,
       paidBillsToday,
+      channelSplitRow,
       activeOrdersRow,
       openBillsRow,
       reopenedBillsRow,
@@ -92,6 +97,9 @@ export async function GET(request) {
       hourlyRows,
       refundsTodayRow,
       discountsTodayRow,
+      cancelledOrdersRow,
+      voidedBillsRow,
+      cancelledKotsRow,
     ] = await Promise.all([
       db.get(`SELECT COALESCE(SUM(amount), 0) as total FROM bill_payments WHERE ${inDay('created_at')}`, [tB.startUtc, tB.endUtcExclusive]).catch(() => ({ total: 0 })),
       db.get(`SELECT COALESCE(SUM(amount), 0) as total FROM bill_payments WHERE ${inDay('created_at')}`, [yB.startUtc, yB.endUtcExclusive]).catch(() => ({ total: 0 })),
@@ -102,6 +110,18 @@ export async function GET(request) {
          FROM bills WHERE ${billDay.sql} AND LOWER(COALESCE(status,'')) IN ('paid','reopened')`,
         billDay.params
       ).catch(() => ({ c: 0, avg_ticket: 0, revenue: 0 })),
+      // Today's sales split by channel. An event bill is an ordinary bill with
+      // an event-linked order, so this is a breakdown of the same total above —
+      // never an addition to it.
+      db.get(
+        `SELECT
+           COALESCE(SUM(CASE WHEN o.event_id IS NOT NULL THEN b.grand_total ELSE 0 END), 0) AS event_sales,
+           COALESCE(SUM(CASE WHEN o.event_id IS NULL THEN b.grand_total ELSE 0 END), 0) AS restaurant_sales,
+           COUNT(CASE WHEN o.event_id IS NOT NULL THEN 1 END) AS event_bills
+         FROM bills b LEFT JOIN orders o ON o.id = b.order_id
+         WHERE ${billDay.sql} AND LOWER(COALESCE(b.status,'')) IN ('paid','reopened')`,
+        billDay.params
+      ).catch(() => ({ event_sales: 0, restaurant_sales: 0, event_bills: 0 })),
       db.get(`SELECT COUNT(*) as c FROM orders WHERE ${LIVE_ORDER}`).catch(() => ({ c: 0 })),
       db.get(
         `SELECT COUNT(*) as c FROM bills WHERE LOWER(COALESCE(status,'')) IN ('unpaid','open','pending','in_progress')`
@@ -268,6 +288,26 @@ export async function GET(request) {
         WHERE ${billDay.sql}
           AND LOWER(COALESCE(status,'')) IN ('paid','reopened')
       `, billDay.params).catch(() => ({ total: 0 })),
+      // What was thrown away today. Counted on the same business day the rest
+      // of this screen uses, and valued so a run of small voids and one large
+      // one can be told apart.
+      db.get(`
+        SELECT COUNT(*) as c, COALESCE(SUM(
+          (SELECT COALESCE(SUM(COALESCE(oi.subtotal, oi.quantity * oi.price)), 0)
+             FROM order_items oi WHERE oi.order_id = orders.id)
+        ), 0) as total
+        FROM orders
+        WHERE ${orderDay.sql} AND LOWER(COALESCE(status,'')) = 'cancelled'
+      `, orderDay.params).catch(() => ({ c: 0, total: 0 })),
+      db.get(`
+        SELECT COUNT(*) as c, COALESCE(SUM(grand_total), 0) as total
+        FROM bills
+        WHERE ${billDay.sql} AND LOWER(COALESCE(status,'')) = 'voided'
+      `, billDay.params).catch(() => ({ c: 0, total: 0 })),
+      db.get(`
+        SELECT COUNT(*) as c FROM kots k
+        WHERE ${kotPrintedDay.sql} AND LOWER(COALESCE(k.status,'')) IN ('cancelled','voided')
+      `, kotPrintedDay.params).catch(() => ({ c: 0 })),
     ]);
 
     let sales = n(todaySalesRow?.total);
@@ -457,8 +497,17 @@ export async function GET(request) {
         } : null,
         kpis: {
           sales: { value: sales, prev: prevSales },
+          // A split of `sales`, not an addition to it: restaurant + event === sales.
+          eventSales: {
+            value: n(channelSplitRow?.event_sales),
+            bills: n(channelSplitRow?.event_bills),
+          },
+          restaurantSales: { value: n(channelSplitRow?.restaurant_sales) },
           orders: { value: orders, prev: prevOrders },
-          profit: { value: profit, prev: prevProfit, note: 'Estimated (60% cost ratio)' },
+          // Withheld from cashiers: it is a margin estimate, not counter data.
+          ...(isAdmin
+            ? { profit: { value: profit, prev: prevProfit, note: 'Estimated (60% cost ratio)' } }
+            : {}),
           avgTicket: { value: avgTicket, paidBills: paidCount },
           occupiedTables: { value: occupiedTables, total: n(totalTablesRow?.c) },
           activeOrders: { value: n(activeOrdersRow?.c) },
@@ -468,6 +517,14 @@ export async function GET(request) {
           floorOpen: { value: floorOpen },
           refundsToday: { value: activeDaySummary ? n(activeDaySummary.sales?.refunds) : n(refundsTodayRow?.total), count: activeDaySummary ? 0 : n(refundsTodayRow?.c) },
           discountsToday: { value: activeDaySummary ? n(activeDaySummary.sales?.discounts) : n(discountsTodayRow?.total) },
+        },
+        // Work that was thrown away today. Kept out of `kpis` on purpose: these
+        // are not performance figures to be compared with yesterday, they are
+        // exceptions someone should look at.
+        cancellations: {
+          orders: { count: n(cancelledOrdersRow?.c), value: n(cancelledOrdersRow?.total) },
+          bills: { count: n(voidedBillsRow?.c), value: n(voidedBillsRow?.total) },
+          kots: { count: n(cancelledKotsRow?.c) },
         },
         needsAttention: needsAttention.slice(0, 10),
         activity: activityTrimmed,

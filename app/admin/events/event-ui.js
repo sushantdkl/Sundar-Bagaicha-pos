@@ -70,3 +70,56 @@ export const guestLabel = (e) => {
  */
 export const errText = (err) =>
   err?.error || err?.message || (err?.status ? `Request failed (${err.status})` : 'Request failed.');
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Modernist presentation helpers.
+ *
+ * Used by the three screens the Claude Design redesign covers (dashboard,
+ * detail, new). STATUS_TONE above is the older Tailwind palette and is still
+ * what Calendar, Spaces, Packages and Reports render with — leaving it in place
+ * is what keeps those pages looking exactly as they did.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** "PARTIALLY_PAID" → "Partially paid". Sentence case, not Title Case. */
+export const statusText = (s) => {
+  const flat = String(s || '').replace(/_/g, ' ').toLowerCase().trim();
+  return flat ? flat.charAt(0).toUpperCase() + flat.slice(1) : '—';
+};
+
+/**
+ * Pill class for an event or payment status. Falls back to the INQUIRY tone
+ * rather than rendering an unstyled pill if the vocabulary ever grows.
+ */
+export const pillClass = (s) => {
+  const key = String(s || '').toUpperCase();
+  const known = [
+    'INQUIRY', 'DRAFT', 'QUOTED', 'CONFIRMED', 'PLANNING', 'FINALIZED',
+    'IN_PROGRESS', 'COMPLETED', 'CANCELLED',
+    'UNPAID', 'DEPOSIT_DUE', 'PARTIALLY_PAID', 'PARTIAL', 'PAID', 'REFUNDED',
+  ];
+  return `pill pill-${known.includes(key) ? key : 'INQUIRY'}`;
+};
+
+/** The happy path, in order. CANCELLED is a departure from it, not a step on it. */
+export const LIFECYCLE = [
+  'INQUIRY', 'DRAFT', 'QUOTED', 'CONFIRMED', 'PLANNING', 'FINALIZED', 'IN_PROGRESS', 'COMPLETED',
+];
+
+/** Rs 1,45,000 — no decimals, for figures that only ever need their magnitude. */
+export const moneyShort = (n) =>
+  `Rs ${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+
+/**
+ * Payment methods the accounting layer can post. Mirrors PAYMENT_ACCOUNT in
+ * lib/accounting.js — an unmapped method throws there rather than silently
+ * landing in Cash, so the picker must not offer one.
+ */
+export const PAYMENT_METHODS = [
+  ['cash', 'Cash'],
+  ['bank_transfer', 'Bank transfer'],
+  ['cheque', 'Cheque'],
+  ['card', 'Card'],
+  ['esewa', 'eSewa'],
+  ['khalti', 'Khalti'],
+  ['qr', 'QR / Fonepay'],
+];

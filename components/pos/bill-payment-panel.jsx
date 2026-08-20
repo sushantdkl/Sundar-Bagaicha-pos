@@ -15,6 +15,7 @@ import CustomerModePicker, {
 import SplitPaymentFields, { emptySplitPayment } from '@/components/billing/split-payment-fields';
 import DateInput from '@/components/ui/date-input.jsx';
 import QrEnlargeModal from '@/components/billing/qr-enlarge-modal';
+import { EXECUTIVE_STATUS_LABEL } from '@/lib/delivery-executives-labels';
 
 function QrCodeButtons({ settings, onOpen }) {
   if (!settings?.esewa_qr_image && !settings?.bank_qr_image) {
@@ -78,6 +79,9 @@ export default function BillPaymentPanel({
   onDeliveryEnabledChange,
   deliveryFee = '',
   onDeliveryFeeChange,
+  deliveryExecutives = [],
+  deliveryExecutiveId = '',
+  onDeliveryExecutiveChange,
 }) {
   const [qrModal, setQrModal] = useState({ open: false, title: '', image: '' });
   const customerSectionRef = useRef(null);
@@ -240,19 +244,46 @@ export default function BillPaymentPanel({
                 </span>
               </label>
               {deliveryEnabled && (
-                <label className="mt-3 block text-xs font-bold text-slate-900">
-                  Delivery charge (Rs)
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={deliveryFee}
-                    onChange={(e) => onDeliveryFeeChange?.(e.target.value)}
-                    className="mt-1 w-full rounded-lg border-2 border-sky-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-                    placeholder="0.00"
-                  />
-                </label>
+                <div className="mt-3 space-y-3">
+                  <label className="block text-xs font-bold text-slate-900">
+                    Delivery charge (Rs)
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      inputMode="decimal"
+                      value={deliveryFee}
+                      onChange={(e) => onDeliveryFeeChange?.(e.target.value)}
+                      className="mt-1 w-full rounded-lg border-2 border-sky-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                      placeholder="0.00"
+                    />
+                  </label>
+
+                  {/* Who carries it. Optional on purpose — a bill must never be
+                      blocked because nobody has been picked yet; the order screen
+                      can still assign or change it afterwards. Hidden entirely when
+                      the executive list is empty or the user lacks the permission
+                      to read it, so checkout looks exactly as it did before. */}
+                  {deliveryExecutives.length > 0 && (
+                    <label className="block text-xs font-bold text-slate-900">
+                      Delivery executive
+                      <select
+                        value={deliveryExecutiveId || ''}
+                        onChange={(e) => onDeliveryExecutiveChange?.(e.target.value)}
+                        className="mt-1 w-full rounded-lg border-2 border-sky-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                      >
+                        <option value="">Assign later</option>
+                        {deliveryExecutives.map((executive) => (
+                          <option key={executive.id} value={executive.id}>
+                            {executive.name}
+                            {executive.status && executive.status !== 'AVAILABLE' ? ` — ${EXECUTIVE_STATUS_LABEL[executive.status] || executive.status}` : ''}
+                            {executive.active_deliveries ? ` (${executive.active_deliveries} on the road)` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
               )}
             </div>
           )}

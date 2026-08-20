@@ -147,6 +147,16 @@ export async function POST(request, context) {
       const lock = tx.driver === 'postgres' ? ' FOR UPDATE' : '';
       const order = await tx.get(`SELECT * FROM orders WHERE id = ?${lock}`, [orderId]);
       if (!order) throw Object.assign(new Error('Order not found.'), { status: 404 });
+      // An event order is settled once, on the event, through
+      // lib/events/billing.js. Letting the POS raise its own bill for the same
+      // food would book the sale twice: once here in `bills`, and again when
+      // the event settles. The event screen is the only place this gets paid.
+      if (order.event_id) {
+        throw Object.assign(
+          new Error('This order belongs to an event. Settle it from the event’s Bill Event action so the sale is recognised once.'),
+          { status: 409, code: 'event_order' }
+        );
+      }
       const businessDayId = await currentBusinessDayId(tx, { required: true, allowStale: true });
       if (Number(order.business_day_id || 0) !== Number(businessDayId)) {
         throw Object.assign(new Error('This order does not belong to the current business day.'), { status: 409 });
@@ -194,6 +204,12 @@ export async function POST(request, context) {
         throw Object.assign(new Error('Only a table-less takeaway can be changed to delivery at checkout.'), { status: 400 });
       }
       const finalOrderType = isDelivery ? 'delivery' : (order.table_id ? 'dine_in' : 'takeaway');
+      // Optional rider chosen at checkout. Attribution only — it names who
+      // carried the order and touches nothing about the sale. Cleared when the
+      // order is not a delivery, so a takeaway can never keep a stale rider.
+      const deliveryExecutiveId = isDelivery && data.delivery_executive_id
+        ? Number(data.delivery_executive_id)
+        : null;
       const requestedDeliveryFee = data.delivery_fee == null
         ? Number(reopenedBill?.delivery_fee ?? order.delivery_fee ?? 0)
         : Number(data.delivery_fee);
@@ -362,11 +378,14 @@ export async function POST(request, context) {
         `UPDATE orders SET status = 'completed', order_type = ?, customer_id = COALESCE(?, customer_id),
            customer_name = COALESCE(?, customer_name), customer_phone = COALESCE(?, customer_phone),
            payment_method = COALESCE(?, payment_method), delivery_fee = ?,
+           delivery_executive_id = ?,
+           delivery_assigned_at = CASE WHEN ? IS NULL THEN NULL ELSE CURRENT_TIMESTAMP END,
            updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
         [
           finalOrderType,
           customerInfo.customer_id, customerInfo.customer_name, customerInfo.customer_phone,
-          primaryPaymentMethod(payment.allocations || allocations), totals.deliveryFee, orderId,
+          primaryPaymentMethod(payment.allocations || allocations), totals.deliveryFee,
+          deliveryExecutiveId, deliveryExecutiveId, orderId,
         ]
       );
       await completeOrderKots(tx, orderId);

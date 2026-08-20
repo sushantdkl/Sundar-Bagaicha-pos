@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import AdminLayout from '@/components/admin/admin-layout';
@@ -63,12 +63,20 @@ export default function AccountsReceivablePage() {
   const [busy, setBusy] = useState(false);
   const keyRef = useRef(newKey());
 
-  const load = async () => {
-    try { setOverview(await apiJson('/api/admin/accounts-receivable')); }
-    catch (error) { addToast(friendlyFromError(error, 'load_failed')); }
+  const load = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
+      const qs = params.toString();
+      setOverview(await apiJson(`/api/admin/accounts-receivable${qs ? `?${qs}` : ''}`));
+    } catch (error) { addToast(friendlyFromError(error, 'load_failed')); }
     finally { setLoading(false); }
-  };
-  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [from, to, addToast]);
+
+  // Re-runs when the period changes — that is what makes the All / Today /
+  // This Week / This Month chips actually do something to the list.
+  useEffect(() => { load(); }, [load]);
   useEffect(() => {
     apiJson('/api/admin/settings').then((r) => setSettings(r.settings || {})).catch(() => {});
   }, []);

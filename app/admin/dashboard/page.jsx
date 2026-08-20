@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import AdminLayout from '@/components/admin/admin-layout';
 import {
   DollarSign, ShoppingCart, TrendingUp, TrendingDown, LayoutGrid,
   AlertTriangle, PackageX, PackageMinus, Clock3, Receipt, CalendarClock,
   ShoppingBag, ChefHat, UserCheck, Boxes, Package, Award, Users, Sparkles,
   Sun, Sunrise, Sunset, Moon, Inbox, Banknote, RotateCcw, CreditCard, Hash,
-  Trash2, Loader2,
+  Trash2, Loader2, PartyPopper,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
 import { TrendChart } from '@/components/admin/report-kit';
@@ -55,6 +56,28 @@ function useTimeContext() {
   const shift = hour < 12 ? 'Morning shift' : hour < 17 ? 'Afternoon shift' : hour < 23 ? 'Evening shift' : 'Closed';
   const timeLabel = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Kathmandu', hour: 'numeric', minute: '2-digit' });
   return { greeting, GreetingIcon, isOpen, shift, timeLabel };
+}
+
+/**
+ * One cancellation figure. Red only when there is something to look at — a
+ * wall of red zeroes on a clean day is noise, and noise is what stops anyone
+ * reading the card on the day it matters.
+ */
+function CancellationCard({ label, count, value, href }) {
+  const raised = Number(count) > 0;
+  const body = (
+    <>
+      <p className={`text-2xl font-bold tabular-nums ${raised ? 'text-red-700' : 'text-gray-400'}`}>{count}</p>
+      <p className={`mt-1 text-xs font-medium ${raised ? 'text-red-700' : 'text-gray-500'}`}>{label}</p>
+      {raised && value != null && Number(value) > 0 && (
+        <p className="mt-0.5 text-xs text-red-600/80">{formatCurrency(value)} of value</p>
+      )}
+    </>
+  );
+  const className = `block rounded-xl border p-4 shadow-sm transition ${
+    raised ? 'border-red-200 bg-red-50 hover:bg-red-100/70' : 'border-gray-200 bg-white hover:bg-gray-50'
+  }`;
+  return href ? <Link href={href} className={className}>{body}</Link> : <div className={className}>{body}</div>;
 }
 
 function GrowthBadge({ current, previous }) {
@@ -223,6 +246,10 @@ export default function AdminDashboard() {
   }, [fetchStats, fetchOnlineOrders, fetchTables, fetchBusinessContext]);
 
   const kpis = stats?.kpis;
+  // Event sales are a slice of `sales`, never an addition to it: an event bill
+  // is an ordinary bill whose order carries an event_id.
+  const eventSales = Number(kpis?.eventSales?.value || 0);
+  const hasEventSales = eventSales > 0;
   const occupiedTables = tables.filter(isRunningTable);
   const reservedTables = tables.filter(isReservedTable);
   const freeTables = Math.max(0, tables.length - occupiedTables.length - reservedTables.length);
@@ -659,8 +686,10 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Section 2 — Primary KPIs */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {/* Section 2 — Primary KPIs.
+                The row widens to five only when there are event sales to show,
+                so a restaurant-only day looks exactly as it always did. */}
+            <div className={`grid grid-cols-2 gap-3 sm:gap-4 ${hasEventSales ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
               <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <div className="p-2 sm:p-2.5 rounded-lg bg-blue-50"><DollarSign className="w-5 h-5 text-blue-600" /></div>
@@ -672,8 +701,26 @@ export default function AdminDashboard() {
                     + {formatCurrency(kpis?.floorOpen?.value || floorAmount)} still open on floor
                   </p>
                 )}
+                {hasEventSales && (
+                  <p className="text-[11px] text-gray-500 mt-0.5 tabular-nums">
+                    Restaurant {formatCurrency(kpis?.restaurantSales?.value || 0)} · Events {formatCurrency(eventSales)}
+                  </p>
+                )}
                 <div className="mt-1"><GrowthBadge current={kpis?.sales?.value || 0} previous={kpis?.sales?.prev} /></div>
               </div>
+
+              {hasEventSales && (
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="p-2 sm:p-2.5 rounded-lg bg-fuchsia-50"><PartyPopper className="w-5 h-5 text-fuchsia-600" /></div>
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 tabular-nums truncate">{formatCurrency(eventSales)}</h3>
+                  <p className="text-gray-500 text-xs sm:text-sm mt-1">Event sales today</p>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    {kpis?.eventSales?.bills || 0} event bill{(kpis?.eventSales?.bills || 0) === 1 ? '' : 's'} · included in paid sales
+                  </p>
+                </div>
+              )}
 
               <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
@@ -693,6 +740,7 @@ export default function AdminDashboard() {
                 <p className="text-[11px] text-gray-400 mt-1">{kpis?.avgTicket?.paidBills || 0} paid bills</p>
               </div>
 
+              {kpis?.profit && (
               <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <div className="p-2 sm:p-2.5 rounded-lg bg-amber-50"><Banknote className="w-5 h-5 text-amber-600" /></div>
@@ -701,6 +749,7 @@ export default function AdminDashboard() {
                 <p className="text-gray-500 text-xs sm:text-sm mt-1">Est. profit</p>
                 <div className="mt-1"><GrowthBadge current={kpis?.profit?.value || 0} previous={kpis?.profit?.prev} /></div>
               </div>
+              )}
             </div>
 
             {/* Live floor / counter pulse — blends API KPIs with live table board */}
@@ -748,6 +797,29 @@ export default function AdminDashboard() {
                 )}
               </div>
             )}
+
+            {/* What was thrown away today. Always rendered, including at zero:
+                a clean day is information too, and a card that only appears
+                when something went wrong trains people not to look for it. */}
+            <div className="grid gap-3 sm:grid-cols-3">
+              <CancellationCard
+                label="Cancelled orders today"
+                count={stats?.cancellations?.orders?.count || 0}
+                value={stats?.cancellations?.orders?.value || 0}
+                href="/admin/orders?status=cancelled"
+              />
+              <CancellationCard
+                label="Cancelled bills today"
+                count={stats?.cancellations?.bills?.count || 0}
+                value={stats?.cancellations?.bills?.value || 0}
+                href="/admin/bills?status=voided"
+              />
+              <CancellationCard
+                label="Cancelled KOTs today"
+                count={stats?.cancellations?.kots?.count || 0}
+                href="/admin/kot"
+              />
+            </div>
 
             {/* Sections 3 & 4 — Needs Attention beside Today's Activity.
                 One grid row from lg up; the default items-stretch makes both

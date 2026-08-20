@@ -35,8 +35,10 @@ export async function GET(request) {
       return NextResponse.json({ statement, bills });
     }
 
+    // The period chips on the ledger page narrow which customers are listed to
+    // those with movement in the window; without a range this is unchanged.
     const [receivables, ageing, ar_balance, banks] = await Promise.all([
-      customerReceivables(db),
+      customerReceivables(db, { from: q.get('from'), to: q.get('to') }),
       receivableAgeing(db),
       arAccountBalance(db),
       listBankAccounts(db),

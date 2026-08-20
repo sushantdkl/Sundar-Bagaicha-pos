@@ -22,7 +22,7 @@ export async function GET(request) {
       return NextResponse.json({ statement, invoices });
     }
     const [payables, ageing, liabilities, banks] = await Promise.all([
-      supplierPayables(db),
+      supplierPayables(db, { from: q.get('from'), to: q.get('to') }),
       liabilityAgeing(db),
       liabilityLedger(db),
       listBankAccounts(db),
